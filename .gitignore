@@ -5,3 +5,5 @@
 *.csv.gz
 *.npz
 *.ckpt
+*.zip
+*.txt
