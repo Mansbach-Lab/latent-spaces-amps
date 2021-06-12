@@ -4,3 +4,4 @@
 *.pdf
 *.csv.gz
 *.npz
+*.ckpt
