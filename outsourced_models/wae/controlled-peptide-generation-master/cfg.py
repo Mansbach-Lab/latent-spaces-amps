@@ -321,7 +321,7 @@ def _set_dataset(dataset):
 
 
 # set path to your data
-DATA_ROOT = './PATH_TO_DATA/'
+DATA_ROOT = './data_processing/'
 
 amp_sample_prob_factors = {
     'amp=amp_posc': 20, 'amp=amp_posnc': 10,
