@@ -124,7 +124,7 @@ class VAEShell():
         self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
 
     def train(self, train_mols, val_mols, train_props=None, val_props=None,
-              epochs=100, save=True, save_freq=None, log=True, log_dir='trials'):
+              epochs=20, save=True, save_freq=None, log=True, log_dir='trials'):
         """
         Train model and validate
 
@@ -144,6 +144,7 @@ class VAEShell():
             log_dir (str): Directory to store log files
         """
         ### Prepare data iterators
+        
         train_data = self.data_gen(train_mols, train_props, char_dict=self.params['CHAR_DICT'])
         val_data = self.data_gen(val_mols, val_props, char_dict=self.params['CHAR_DICT'])
 
@@ -213,7 +214,8 @@ class VAEShell():
                     true_prop = Variable(props_data)
                     src_mask = (src != self.pad_idx).unsqueeze(-2)
                     tgt_mask = make_std_mask(tgt, self.pad_idx)
-
+                    
+                   
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)

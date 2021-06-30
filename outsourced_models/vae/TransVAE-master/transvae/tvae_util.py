@@ -14,12 +14,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from rdkit import rdBase
-from rdkit import Chem
-from rdkit.Chem import Descriptors
-from rdkit.Chem.AllChem import GetMorganFingerprintAsBitVect as Morgan
+#from rdkit import rdBase
+#from rdkit import Chem
+#from rdkit.Chem import Descriptors
+#from rdkit.Chem.AllChem import GetMorganFingerprintAsBitVect as Morgan
 
-rdBase.DisableLog('rdApp.*')
+#rdBase.DisableLog('rdApp.*')
 
 
 ######## MODEL HELPERS ##########
@@ -135,6 +135,7 @@ def get_char_weights(train_smiles, params, freq_penalty=0.5):
             char_dist['_'] += 1
     for i, v in enumerate(char_dist.values()):
         char_counts[i] = v
+    print(char_dist)
     top = np.sum(np.log(char_counts))
     for i in range(char_counts.shape[0]):
         char_weights[i] = top / np.log(char_counts[i])
