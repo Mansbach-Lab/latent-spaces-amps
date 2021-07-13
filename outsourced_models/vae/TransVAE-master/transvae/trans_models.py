@@ -14,6 +14,9 @@ from transvae.opt import NoamOpt
 from transvae.data import vae_data_gen, make_std_mask
 from transvae.loss import vae_loss, trans_vae_loss
 
+import torch.distributed as dist
+import torch.utils.data.distributed
+
 
 ####### MODEL SHELL ##########
 
@@ -48,6 +51,19 @@ class VAEShell():
                 self.params['CHAR_WEIGHTS'] = torch.tensor(self.params['CHAR_WEIGHTS'], dtype=torch.float)
             else:
                 self.params['CHAR_WEIGHTS'] = torch.ones(self.vocab_size, dtype=torch.float)
+        ### DDP INITIALIZATION
+        if 'INIT_METHOD' not in self.params.keys():
+            self.params['INIT_METHOD'] = 'tcp://127.0.0.1:3456'
+        if 'DIST_BACKEND' not in self.params.keys():
+            self.params['DIST_BACKEND'] = 'gloo'
+        if 'WORLD_SIZE' not in self.params.keys():
+            self.params['DISTRIBUTED'] = True
+        if 'WORLD_SIZE' not in self.params.keys():
+            self.params['WORLD_SIZE'] = 1
+        if 'NUM_WORKERS' not in self.params.keys():
+            self.params['NUM_WORKERS'] = 0
+        if 'INIT_METHOD' not in self.params.keys():
+            self.params['DDP'] = False
         self.loss_func = vae_loss
         self.data_gen = vae_data_gen
 
@@ -124,7 +140,7 @@ class VAEShell():
         self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
 
     def train(self, train_mols, val_mols, train_props=None, val_props=None,
-              epochs=20, save=True, save_freq=None, log=True, log_dir='trials'):
+              epochs=200, save=True, save_freq=None, log=True, log_dir='trials'):
         """
         Train model and validate
 
@@ -143,16 +159,29 @@ class VAEShell():
             log (bool): If true, writes training metrics to log file
             log_dir (str): Directory to store log files
         """
+  
         ### Prepare data iterators
-        
+
         train_data = self.data_gen(train_mols, train_props, char_dict=self.params['CHAR_DICT'])
         val_data = self.data_gen(val_mols, val_props, char_dict=self.params['CHAR_DICT'])
+        #SPECIAL DATA INPUT FOR DDP
+        if self.params['DDP']:
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
+            train_iter = torch.utils.data.DataLoader(train_data,
+                                                 batch_size=self.params['BATCH_SIZE'],
+                                                 shuffle=True, num_workers=0,
+                                                 pin_memory=False, drop_last=True, sampler=train_sampler)
+            val_iter = torch.utils.data.DataLoader(val_data,
+                                               batch_size=self.params['BATCH_SIZE'],
+                                               shuffle=True, num_workers=0,
+                                               pin_memory=False, drop_last=True, sampler=train_sampler)
 
-        train_iter = torch.utils.data.DataLoader(train_data,
+        else:
+            train_iter = torch.utils.data.DataLoader(train_data,
                                                  batch_size=self.params['BATCH_SIZE'],
                                                  shuffle=True, num_workers=0,
                                                  pin_memory=False, drop_last=True)
-        val_iter = torch.utils.data.DataLoader(val_data,
+            val_iter = torch.utils.data.DataLoader(val_data,
                                                batch_size=self.params['BATCH_SIZE'],
                                                shuffle=True, num_workers=0,
                                                pin_memory=False, drop_last=True)

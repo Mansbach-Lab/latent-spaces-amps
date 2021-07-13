@@ -29,7 +29,13 @@ def train(args):
               'BETA_INIT': args.beta_init,
               'EPS_SCALE': args.eps_scale,
               'LR_SCALE': args.lr_scale,
-              'WARMUP_STEPS': args.warmup_steps}
+              'WARMUP_STEPS': args.warmup_steps,
+              'INIT_METHOD': args.init_method,
+              'DIST_BACKEND': args.dist_backend,
+              'WORLD_SIZE': args.world_size,
+              'DISTRIBUTED': args.distributed,
+              'NUM_WORKERS': args.num_workers,
+              'DDP': args.DDP}
 
     ### Load data, vocab and token weights
     if args.data_source == 'custom':
