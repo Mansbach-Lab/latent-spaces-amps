@@ -2,6 +2,14 @@ import argparse
 from transvae.trans_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 
+'''
+Added the aae support lines 37 & 49
+need to add sample parser and attn_parser
+'''
+from transvae.aae_models import AAE
+
+
+
 def model_init(args, params={}):
     ### Model Name
     if args.save_name is None:
@@ -30,13 +38,19 @@ def model_init(args, params={}):
         vae = RNN(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
                   d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+    elif args.model == 'aae':
+        vae = AAE(params=params, name=save_name, d_model=args.d_model,
+                  d_latent=args.d_latent, property_predictor=args.property_predictor,
+                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+        
+     
 
     return vae
 
 def train_parser():
     parser = argparse.ArgumentParser()
     ### Architecture Parameters
-    parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn'],
+    parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn', 'aae'],
                         required=True, type=str)
     parser.add_argument('--d_model', default=128, type=int)
     parser.add_argument('--d_feedforward', default=128, type=int)
@@ -70,6 +84,19 @@ def train_parser():
     parser.add_argument('--save_name', default=None, type=str)
     parser.add_argument('--save_freq', default=5, type=int)
     ### Distributed Data Parallel addition
+<<<<<<< HEAD
+    parser.add_argument('--init_method', default=None, type=str)
+    parser.add_argument('--dist_backend', default='gloo', type=str)
+    parser.add_argument('--world_size', default=1, type=int)
+    parser.add_argument('--distributed', action='store_true')
+    parser.add_argument('--num_workers', type=int, default=0)
+    parser.add_argument('--DDP', type=bool, default=False)
+    
+    """AAE aArguments"""
+    parser.add_argument('--discriminator_layers', nargs='+', type=int, default=[640, 256], 
+                        help='Numbers of features for linear layers in discriminator')
+    
+=======
     parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
     parser.add_argument('--dist_backend', default='gloo', type=str, help='')
     parser.add_argument('--world_size', default=1, type=int, help='')
@@ -77,6 +104,7 @@ def train_parser():
     parser.add_argument('--num_workers', type=int, default=0, help='')
     parser.add_argument('--DDP', type=bool, default=False, help='')
 
+>>>>>>> parent of 60f694a (Some CC multi-GPU tweaks)
     return parser
 
 def sample_parser():

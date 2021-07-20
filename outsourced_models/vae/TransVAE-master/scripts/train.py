@@ -35,7 +35,8 @@ def train(args):
               'WORLD_SIZE': args.world_size,
               'DISTRIBUTED': args.distributed,
               'NUM_WORKERS': args.num_workers,
-              'DDP': args.DDP}
+              'DDP': args.DDP,
+              'DISCRIMINATOR_LAYERS' : args.discriminator_layers}
 
     ### Load data, vocab and token weights
     if args.data_source == 'custom':

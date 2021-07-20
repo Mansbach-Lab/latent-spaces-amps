@@ -56,7 +56,7 @@ class VAEShell():
             self.params['INIT_METHOD'] = 'tcp://127.0.0.1:3456'
         if 'DIST_BACKEND' not in self.params.keys():
             self.params['DIST_BACKEND'] = 'gloo'
-        if 'WORLD_SIZE' not in self.params.keys():
+        if 'DISTRIBUTED' not in self.params.keys():
             self.params['DISTRIBUTED'] = True
         if 'WORLD_SIZE' not in self.params.keys():
             self.params['WORLD_SIZE'] = 1
@@ -215,6 +215,8 @@ class VAEShell():
         ### Initialize Annealer
         kl_annealer = KLAnnealer(self.params['BETA_INIT'], self.params['BETA'],
                                  epochs, self.params['ANNEAL_START'])
+        ####################################################################################################
+        stophereplease
 
         ### Epoch loop
         for epoch in range(epochs):
