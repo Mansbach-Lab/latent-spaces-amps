@@ -216,7 +216,6 @@ class VAEShell():
         kl_annealer = KLAnnealer(self.params['BETA_INIT'], self.params['BETA'],
                                  epochs, self.params['ANNEAL_START'])
         ####################################################################################################
-        stophereplease
 
         ### Epoch loop
         for epoch in range(epochs):

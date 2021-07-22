@@ -84,7 +84,7 @@ def train_parser():
     parser.add_argument('--save_name', default=None, type=str)
     parser.add_argument('--save_freq', default=5, type=int)
     ### Distributed Data Parallel addition
-<<<<<<< HEAD
+
     parser.add_argument('--init_method', default=None, type=str)
     parser.add_argument('--dist_backend', default='gloo', type=str)
     parser.add_argument('--world_size', default=1, type=int)
@@ -95,16 +95,7 @@ def train_parser():
     """AAE aArguments"""
     parser.add_argument('--discriminator_layers', nargs='+', type=int, default=[640, 256], 
                         help='Numbers of features for linear layers in discriminator')
-    
-=======
-    parser.add_argument('--init_method', default='tcp://127.0.0.1:3456', type=str, help='')
-    parser.add_argument('--dist_backend', default='gloo', type=str, help='')
-    parser.add_argument('--world_size', default=1, type=int, help='')
-    parser.add_argument('--distributed', action='store_true', help='')
-    parser.add_argument('--num_workers', type=int, default=0, help='')
-    parser.add_argument('--DDP', type=bool, default=False, help='')
 
->>>>>>> parent of 60f694a (Some CC multi-GPU tweaks)
     return parser
 
 def sample_parser():
