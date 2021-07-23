@@ -12,6 +12,9 @@ from transvae.tvae_util import *
 from transvae.opt import NoamOpt, AdamOpt
 from transvae.trans_models import VAEShell, Generator, ConvBottleneck, DeconvBottleneck, PropertyPredictor, Embeddings, LayerNorm
 
+import torch.distributed as dist
+import torch.utils.data.distributed
+
 # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # Attention architectures inspired by the ^^^ implementation
 ########## Model Classes ############
