@@ -15,6 +15,8 @@ from transvae.trans_models import VAEShell, Generator, ConvBottleneck, DeconvBot
 import torch.distributed as dist
 import torch.utils.data.distributed
 
+import os
+
 # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # Attention architectures inspired by the ^^^ implementation
 ########## Model Classes ############
@@ -139,10 +141,10 @@ class RNN(VAEShell):
 
         ### Build model architecture
         if load_fn is None:
-            self.build_model()
             if self.params['DDP']:
                 ### prepare distributed data parallel (added by Samuel Renaud)
-                print("GPUs per node: ",torch.cuda.device_count())
+                #print
+                os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
                 ngpus_per_node = torch.cuda.device_count()
                 
                 """ This next line is the key to getting DistributedDataParallel working on SLURM:
@@ -155,17 +157,26 @@ class RNN(VAEShell):
                 available_gpus = list(os.environ.get('CUDA_VISIBLE_DEVICES').replace(',',""))
                 current_device = int(available_gpus[local_rank])
                 torch.cuda.set_device(current_device)
+                
+                self.build_model()
 
                 """ this block initializes a process group and initiate communications
                         between all processes running on all nodes """
-                print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
+                #print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
+                os.system("echo From Rank: {}, ==> Initializing Process Group...".format(rank))         
                 #init the process group
                 dist.init_process_group(backend=self.params['DIST_BACKEND'], init_method=self.params['INIT_METHOD'],
                                         world_size=self.params['WORLD_SIZE'], rank=rank)
-                print("process group ready!")
-                print('From Rank: {}, ==> Making model..'.format(rank))
+                os.system("echo process group ready!")
+                os.system('echo From Rank: {}, ==> Making model..'.format(rank))
+                #print("process group ready!")
+                #print('From Rank: {}, ==> Making model..'.format(rank))
+                os.system("echo final check; ngpus_per_node={},local_rank={},rank={},available_gpus={},current_device={}"
+                          .format(ngpus_per_node,local_rank,rank,available_gpus,current_device))
+                
+                #self.model.cuda()
 
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device])
+                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
         else:
             self.load(load_fn)
 

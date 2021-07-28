@@ -166,15 +166,17 @@ class VAEShell():
         val_data = self.data_gen(val_mols, val_props, char_dict=self.params['CHAR_DICT'])
         #SPECIAL DATA INPUT FOR DDP
         if self.params['DDP']:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(train_data)
+            train_sampler = torch.utils.data.distributed.DistributedSampler(train_data, shuffle=True)
+            val_sampler = torch.utils.data.distributed.DistributedSampler(val_data, shuffle=True)
+            
             train_iter = torch.utils.data.DataLoader(train_data,
-                                                 batch_size=self.params['BATCH_SIZE'],
-                                                 shuffle=True, num_workers=0,
-                                                 pin_memory=False, drop_last=True, sampler=train_sampler)
+                                                batch_size=self.params['BATCH_SIZE'],
+                                                num_workers=0,
+                                                pin_memory=False, drop_last=True, sampler=train_sampler)
             val_iter = torch.utils.data.DataLoader(val_data,
-                                               batch_size=self.params['BATCH_SIZE'],
-                                               shuffle=True, num_workers=0,
-                                               pin_memory=False, drop_last=True, sampler=train_sampler)
+                                                batch_size=self.params['BATCH_SIZE'],
+                                                num_workers=0,
+                                                pin_memory=False, drop_last=True, sampler=val_sampler)
 
         else:
             train_iter = torch.utils.data.DataLoader(train_data,
