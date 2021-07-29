@@ -221,6 +221,7 @@ class VAEShell():
 
         ### Epoch loop
         for epoch in range(epochs):
+            epoch_start_time= perf_counter()
             ### Train Loop
             self.model.train()
             losses = []
@@ -365,7 +366,9 @@ class VAEShell():
 
             self.n_epochs += 1
             val_loss = np.mean(losses)
-            print('Epoch - {} Train - {} Val - {} KLBeta - {}'.format(self.n_epochs, train_loss, val_loss, beta))
+            epoch_end_time = perf_counter()
+            epoch_time = round(epoch_start_time - epoch_end_time, 5)
+            print('Epoch - {} Train - {} Val - {} KLBeta - {} Epoch time - {}'.format(self.n_epochs, train_loss, val_loss, beta, epoch_time))
 
             ### Update current state and save model
             self.current_state['epoch'] = self.n_epochs
@@ -689,7 +692,42 @@ class TransVAE(VAEShell):
 
         ### Build model architecture
         if load_fn is None:
-            self.build_model()
+            if self.params['DDP']:
+                ### prepare distributed data parallel (added by Samuel Renaud)
+                #print
+                os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
+                ngpus_per_node = torch.cuda.device_count()
+                
+                """ This next line is the key to getting DistributedDataParallel working on SLURM:
+                    SLURM_NODEID is 0 or 1 in this example, SLURM_LOCALID is the id of the 
+                    current process inside a node and is also 0 or 1 in this example."""
+                local_rank = int(os.environ.get("SLURM_LOCALID")) 
+                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
+
+                """ This next block parses CUDA_VISIBLE_DEVICES to find out which GPUs have been allocated to the job, then sets torch.device to the GPU corresponding       to the local rank (local rank 0 gets the first GPU, local rank 1 gets the second GPU etc) """
+                available_gpus = list(os.environ.get('CUDA_VISIBLE_DEVICES').replace(',',""))
+                current_device = int(available_gpus[local_rank])
+                torch.cuda.set_device(current_device)
+                
+                self.build_model()
+
+                """ this block initializes a process group and initiate communications
+                        between all processes running on all nodes """
+                #print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
+                os.system("echo From Rank: {}, ==> Initializing Process Group...".format(rank))         
+                #init the process group
+                dist.init_process_group(backend=self.params['DIST_BACKEND'], init_method=self.params['INIT_METHOD'],
+                                        world_size=self.params['WORLD_SIZE'], rank=rank)
+                os.system("echo process group ready!")
+                os.system('echo From Rank: {}, ==> Making model..'.format(rank))
+                #print("process group ready!")
+                #print('From Rank: {}, ==> Making model..'.format(rank))
+                os.system("echo final check; ngpus_per_node={},local_rank={},rank={},available_gpus={},current_device={}"
+                          .format(ngpus_per_node,local_rank,rank,available_gpus,current_device))
+                
+                #self.model.cuda()
+
+                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
         else:
             self.load(load_fn)
 
