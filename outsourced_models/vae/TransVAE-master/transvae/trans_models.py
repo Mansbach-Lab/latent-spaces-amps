@@ -368,6 +368,7 @@ class VAEShell():
             val_loss = np.mean(losses)
             epoch_end_time = perf_counter()
             epoch_time = round(epoch_start_time - epoch_end_time, 5)
+            os.system("echo Epoch - {} Train - {} Val - {} KLBeta - {} Epoch time - {}".format(self.n_epochs, train_loss, val_loss, beta, epoch_time))
             print('Epoch - {} Train - {} Val - {} KLBeta - {} Epoch time - {}'.format(self.n_epochs, train_loss, val_loss, beta, epoch_time))
 
             ### Update current state and save model
@@ -728,6 +729,7 @@ class TransVAE(VAEShell):
                 #self.model.cuda()
 
                 self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
+            else: self.build_model()
         else:
             self.load(load_fn)
 

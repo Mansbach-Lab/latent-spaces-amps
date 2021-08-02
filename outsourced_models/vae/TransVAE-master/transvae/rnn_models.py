@@ -177,6 +177,8 @@ class RNN(VAEShell):
                 #self.model.cuda()
 
                 self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
+            else:
+                self.build_model()
         else:
             self.load(load_fn)
 
