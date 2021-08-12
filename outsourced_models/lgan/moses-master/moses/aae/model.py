@@ -52,9 +52,11 @@ class Decoder(nn.Module):
             states = (h0, c0)
 
         x = self.embedding_layer(x)
-        x = pack_padded_sequence(x, lengths, batch_first=True)
+        x = pack_padded_sequence(x, lengths, batch_first=True) #removes the 0's and packs the sequence together into 1 tensor
         x, states = self.lstm_layer(x, states)
-        x, lengths = pad_packed_sequence(x, batch_first=True)
+        #separates the sequences and pads with 0's returns tensors of sequences and lengths of sequences within each tensor
+        x, lengths = pad_packed_sequence(x, batch_first=True) 
+       
         x = self.linear_layer(x)
 
         return x, lengths, states

@@ -62,7 +62,7 @@ class VAEShell():
             self.params['WORLD_SIZE'] = 1
         if 'NUM_WORKERS' not in self.params.keys():
             self.params['NUM_WORKERS'] = 0
-        if 'INIT_METHOD' not in self.params.keys():
+        if 'DDP' not in self.params.keys():
             self.params['DDP'] = False
         self.loss_func = vae_loss
         self.data_gen = vae_data_gen

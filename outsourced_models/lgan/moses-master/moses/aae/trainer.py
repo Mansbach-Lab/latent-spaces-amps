@@ -122,6 +122,9 @@ class AAETrainer(MosesTrainer):
                                        decoder_output_lengths)], dim=0)
             decoder_targets = torch.cat(
                 [t[:l] for t, l in zip(*decoder_targets)], dim=0)
+            ##remove me!!!!
+            print("i: ", i, "disc_Steps: ", self.config.discriminator_steps+1)
+            print("i % (self.config.discriminator_steps + 1)", i % (self.config.discriminator_steps + 1) )
 
             if i % (self.config.discriminator_steps + 1) == 0:
                 autoencoder_loss = criterions['autoencoder'](
@@ -179,7 +182,9 @@ class AAETrainer(MosesTrainer):
                     optimizers['autoencoder'].step()
                 else:
                     optimizers['discriminator'].step()
-
+            ##temporary testing        
+            if(i==5):    
+                STOPHERE
             tqdm_data.set_postfix(postfix)
 
         postfix['mode'] = 'Eval' if optimizers is None else 'Train'
