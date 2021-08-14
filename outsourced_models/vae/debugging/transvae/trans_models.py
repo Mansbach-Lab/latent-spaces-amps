@@ -140,7 +140,10 @@ class VAEShell():
         self.pad_idx = self.params['CHAR_DICT']['_']
         self.build_model()
         self.model.load_state_dict(self.current_state['model_state_dict'])
-        self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
+        if self.model_type == 'aae': #load the aae generator and discriminator optimizers separately
+            self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
+        else:
+            self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
 
     def train(self, train_mols, val_mols, train_props=None, val_props=None,
               epochs=200, save=True, save_freq=None, log=True, log_dir='trials'):
@@ -215,7 +218,7 @@ class VAEShell():
                 already_wrote = False
             log_file = open(log_fn, 'a')
             if not already_wrote:
-                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,kld_loss,prop_mse_loss,run_time\n')
+                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,kld_loss,prop_mse_loss,disc_loss,run_time\n')
             log_file.close()
 
         ### Initialize Annealer
@@ -269,7 +272,9 @@ class VAEShell():
                         loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  disc_out, latent_mem, self.optimizer,beta)
+                                                                  self, latent_mem, disc_out, self.optimizer,beta)
+                        avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
+                        
                     else:
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
@@ -280,8 +285,8 @@ class VAEShell():
                     avg_bce_losses.append(bce.item())
                     avg_kld_losses.append(kld.item())
                     avg_prop_mse_losses.append(prop_mse.item())
-                    avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
-                    loss.backward()
+                    if not self.model_type == 'aae': #the aae backpropagates in the loss function
+                        loss.backward()
                     
                 if not self.model_type == 'aae':
                     self.optimizer.step()
@@ -295,19 +300,24 @@ class VAEShell():
                     avg_bcemask = 0
                 else:
                     avg_bcemask = np.mean(avg_bcemask_losses)
+                if len(avg_disc_losses) == 0:
+                    avg_disc = 0
+                else:
+                    avg_disc = np.mean(avg_disc_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
 
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                          j, 'train',
                                                                          avg_loss,
                                                                          avg_bce,
                                                                          avg_bcemask,
                                                                          avg_kld,
                                                                          avg_prop_mse,
+                                                                         avg_disc,
                                                                          run_time))
                     log_file.close()
             train_loss = np.mean(losses)
@@ -347,12 +357,12 @@ class VAEShell():
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                     if self.model_type == 'aae':
-                        x_out, mu, logvar, pred_prop, disc_out = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse = aae_loss(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
+                        loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  disc_out, beta)
-                        avg_bcemask_losses.append(bce_mask.item())
+                                                                  self, latent_mem, disc_out, self.optimizer,beta)
+                        avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                     else:
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
@@ -371,19 +381,24 @@ class VAEShell():
                     avg_bcemask = 0
                 else:
                     avg_bcemask = np.mean(avg_bcemask_losses)
+                if len(avg_disc_losses) == 0:
+                    avg_disc = 0
+                else:
+                    avg_disc = np.mean(avg_disc_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
 
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                 j, 'test',
                                                                 avg_loss,
                                                                 avg_bce,
                                                                 avg_bcemask,
                                                                 avg_kld,
                                                                 avg_prop_mse,
+                                                                avg_disc,
                                                                 run_time))
                     log_file.close()
 
@@ -397,7 +412,10 @@ class VAEShell():
             ### Update current state and save model
             self.current_state['epoch'] = self.n_epochs
             self.current_state['model_state_dict'] = self.model.state_dict()
-            self.current_state['optimizer_state_dict'] = self.optimizer.state_dict
+            if self.model_type == 'aae': #The aae uses two optimizers we store both optimizer states in a tuple, see load for loading
+                self.current_state['optimizer_state_dict'] = (self.optimizer.state_dict_g,self.optimizer.state_dict_d)
+            else:
+                self.current_state['optimizer_state_dict'] = self.optimizer.state_dict
 
             if val_loss < self.best_loss:
                 self.best_loss = val_loss

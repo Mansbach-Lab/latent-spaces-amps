@@ -77,3 +77,7 @@ class AAEOpt:
     def load_state_dict_d(self, state_dict):
         self.state_dict_d = state_dict
         
+    def load_state_dict(self, state_dict_g, state_dict_d):
+        self.load_state_dict_g(state_dict_g)
+        self.load_state_dict_d(state_dict_d)
+        
