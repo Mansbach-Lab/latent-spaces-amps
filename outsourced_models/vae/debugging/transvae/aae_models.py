@@ -189,7 +189,7 @@ class RNNEncoder(nn.Module):
             mem = self.linear_bypass(mem) #added linear_bypass
         else:
             mu, logvar = self.z_means(mem), self.z_var(mem)
-            mem = self.reparameterize(mu, logvar) 
+            mem = self.reparameterize(mu, logvar)
         return mem, mu, logvar
 
     def initH(self, batch_size):

@@ -7,6 +7,7 @@ Added the aae support lines 37 & 49
 need to add sample parser and attn_parser
 '''
 from transvae.aae_models import AAE
+from transvae.wae_models import WAE
 
 
 
@@ -44,9 +45,11 @@ def model_init(args, params={}):
         vae = AAE(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
                   d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
-       # AAE(self, params, name, N, d_model, d_latent, dropout, tf, bypass_bottleneck, property_predictor,
-       #         d_pp, depth_pp, load_fn, discriminator_layers)
-     
+        
+    elif args.model == 'wae':
+        vae = WAE(params=params, name=save_name, d_model=args.d_model,
+                  d_latent=args.d_latent, property_predictor=args.property_predictor,
+                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
 
     return vae
 
@@ -54,7 +57,7 @@ def train_parser():
     print("train_parser function called /n")
     parser = argparse.ArgumentParser()
     ### Architecture Parameters
-    parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn', 'aae'],
+    parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn', 'aae', 'wae'],
                         required=True, type=str)
     parser.add_argument('--d_model', default=128, type=int)
     parser.add_argument('--d_feedforward', default=128, type=int)
@@ -63,8 +66,8 @@ def train_parser():
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
     ### Hyperparameters
-    parser.add_argument('--batch_size', default=500, type=int)
-    parser.add_argument('--batch_chunks', default=5, type=int)
+    parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--batch_chunks', default=1, type=int)
     parser.add_argument('--beta', default=0.05, type=float)
     parser.add_argument('--beta_init', default=1e-8, type=float)
     parser.add_argument('--anneal_start', default=0, type=int)

@@ -7,7 +7,7 @@ from torch.autograd import Variable
 
 from transvae.tvae_util import *
 
-def vae_data_gen(mols, props, char_dict):
+def vae_data_gen(mols, props=None, char_dict=None):
     """
     Encodes input smiles to tensors with token ids
 

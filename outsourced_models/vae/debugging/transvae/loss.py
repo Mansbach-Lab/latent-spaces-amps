@@ -68,3 +68,51 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     opt.d_opt.step() 
 
     return auto_and_gen_loss, BCE, torch.tensor(0.), torch.tensor(0.), disc_loss
+
+def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, beta=1):
+    "reconstruction and mmd loss"
+    #reconstruction loss
+    x = x.long()[:,1:] - 1 
+    x = x.contiguous().view(-1)
+    x_out = x_out.contiguous().view(-1, x_out.size(2)) 
+    BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights)  #smiles strings have 25 classes or characters (check len(weights))
+    
+   
+    z_tilde = latent_codes
+    z_var = 2 #variance of gaussian
+    sigma = math.sqrt(2)#sigma (Number): scalar variance of isotropic gaussian prior P(Z). set to sqrt(2)
+    z = sigma*torch.randn(latent_codes.shape) #sample gaussian
+    
+    n = z.size(0)
+    mmd = im_kernel_sum(z, z, z_var, exclude_diag=True).div(n*(n-1)) + \
+          im_kernel_sum(z_tilde, z_tilde, z_var, exclude_diag=True).div(n*(n-1)) + \
+          -im_kernel_sum(z, z_tilde, z_var, exclude_diag=False).div(n*n).mul(2)
+
+    return BCE + mmd, BCE, torch.tensor(0.), torch.tensor(0.), mmd
+
+def im_kernel_sum(z1, z2, z_var, exclude_diag=True):
+    "adapted from  https://github.com/1Konny/WAE-pytorch/blob/master/ops.py"
+    r"""Calculate sum of sample-wise measures of inverse multiquadratics kernel described in the WAE paper.
+    Args:
+        z1 (Tensor): batch of samples from a multivariate gaussian distribution \
+            with scalar variance of z_var.
+        z2 (Tensor): batch of samples from another multivariate gaussian distribution \
+            with scalar variance of z_var.
+        exclude_diag (bool): whether to exclude diagonal kernel measures before sum it all.
+    """
+    assert z1.size() == z2.size()
+    assert z1.ndimension() == 2
+
+    z_dim = z1.size(1)
+    C = 2*z_dim*z_var
+
+    z11 = z1.unsqueeze(1).repeat(1, z2.size(0), 1)
+    z22 = z2.unsqueeze(0).repeat(z1.size(0), 1, 1)
+
+    kernel_matrix = C/(1e-9+C+(z11-z22).pow(2).sum(2))
+    kernel_sum = kernel_matrix.sum()
+    # numerically identical to the formulation. but..
+    if exclude_diag:
+        kernel_sum -= kernel_matrix.diag().sum()
+
+    return kernel_sum

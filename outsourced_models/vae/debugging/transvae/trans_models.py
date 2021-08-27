@@ -12,7 +12,7 @@ from torch.autograd import Variable
 from transvae.tvae_util import *
 from transvae.opt import NoamOpt
 from transvae.data import vae_data_gen, make_std_mask
-from transvae.loss import vae_loss, trans_vae_loss, aae_loss
+from transvae.loss import vae_loss, trans_vae_loss, aae_loss, wae_loss
 
 import torch.distributed as dist
 import torch.utils.data.distributed
@@ -218,7 +218,8 @@ class VAEShell():
                 already_wrote = False
             log_file = open(log_fn, 'a')
             if not already_wrote:
-                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,kld_loss,prop_mse_loss,disc_loss,run_time\n')
+                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,'\
+                               'kld_loss,prop_mse_loss,disc_loss,mmd_loss,run_time\n')
             log_file.close()
 
         ### Initialize Annealer
@@ -240,6 +241,7 @@ class VAEShell():
                 avg_kld_losses = []
                 avg_prop_mse_losses = []
                 avg_disc_losses = []
+                avg_mmd_losses = []
                 start_run_time = perf_counter()
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
@@ -255,9 +257,7 @@ class VAEShell():
                     true_prop = Variable(props_data)
                     src_mask = (src != self.pad_idx).unsqueeze(-2) #true or false according to sequence length
                     tgt_mask = make_std_mask(tgt, self.pad_idx) #cascading true false masking [true false...] [true true false...] ...
-                    
-                    
-                   
+                                      
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)
@@ -275,12 +275,23 @@ class VAEShell():
                                                                   self, latent_mem, disc_out, self.optimizer,beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
-                    else:
+                    if self.model_type == 'wae': 
+                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
+                        loss, bce, kld, prop_mse, mmd_loss  = wae_loss(src, x_out, mu, logvar,
+                                                                  true_prop, pred_prop,
+                                                                  self.params['CHAR_WEIGHTS'],
+                                                                  latent_mem,
+                                                                  beta)
+                        avg_mmd_losses.append(mmd_loss.item())
+                        
+                    if self.model_type == 'rnn' or self.model_type =='rnnattn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   beta)
+                        
+                        
                     avg_losses.append(loss.item())
                     avg_bce_losses.append(bce.item())
                     avg_kld_losses.append(kld.item())
@@ -304,13 +315,17 @@ class VAEShell():
                     avg_disc = 0
                 else:
                     avg_disc = np.mean(avg_disc_losses)
+                if len(avg_mmd_losses) == 0:
+                    avg_mmd = 0
+                else:
+                    avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
 
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                          j, 'train',
                                                                          avg_loss,
                                                                          avg_bce,
@@ -318,6 +333,7 @@ class VAEShell():
                                                                          avg_kld,
                                                                          avg_prop_mse,
                                                                          avg_disc,
+                                                                         avg_mmd,
                                                                          run_time))
                     log_file.close()
             train_loss = np.mean(losses)
@@ -331,6 +347,8 @@ class VAEShell():
                 avg_bcemask_losses = []
                 avg_kld_losses = []
                 avg_prop_mse_losses = []
+                avg_disc_losses = []
+                avg_mmd_losses = []
                 start_run_time = perf_counter()
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
@@ -363,7 +381,16 @@ class VAEShell():
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   self, latent_mem, disc_out, self.optimizer,beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
-                    else:
+                        
+                    if self.model_type == 'wae': 
+                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
+                        loss, bce, kld, prop_mse, mmd_loss = wae_loss(src, x_out, mu, logvar,
+                                                                  true_prop, pred_prop,
+                                                                  self.params['CHAR_WEIGHTS'],
+                                                                  latent_mem,
+                                                                  beta)
+                        avg_mmd_losses.append(mmd_loss.item())
+                    if self.model_type == 'rnn' or self.model_type =='rnnattn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
@@ -385,13 +412,17 @@ class VAEShell():
                     avg_disc = 0
                 else:
                     avg_disc = np.mean(avg_disc_losses)
+                if len(avg_mmd_losses) == 0:
+                    avg_mmd = 0
+                else:
+                    avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
 
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                 j, 'test',
                                                                 avg_loss,
                                                                 avg_bce,
@@ -399,6 +430,7 @@ class VAEShell():
                                                                 avg_kld,
                                                                 avg_prop_mse,
                                                                 avg_disc,
+                                                                avg_mmd,
                                                                 run_time))
                     log_file.close()
 
@@ -476,6 +508,7 @@ class VAEShell():
         max_len = self.tgt_len
         decoded = torch.ones(mem.shape[0],1).fill_(start_symbol).long()
         tgt = torch.ones(mem.shape[0],max_len+1).fill_(start_symbol).long()
+        
         if src_mask is None and self.model_type == 'transformer':
             mask_lens = self.model.encoder.predict_mask_length(mem)
             src_mask = torch.zeros((mem.shape[0], 1, self.src_len+1))
@@ -559,6 +592,10 @@ class VAEShell():
                 ### Run through encoder to get memory
                 if self.model_type == 'transformer':
                     _, mem, _, _ = self.model.encode(src, src_mask)
+                elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
+                     mem, _, _ = self.model.encode(src)
+                elif self.model_type == 'wae':
+                     mem, _, _ = self.model.encode(src)
                 else:
                     _, mem, _ = self.model.encode(src)
                 start = j*self.batch_size+i*self.chunk_size
