@@ -194,7 +194,7 @@ class RNN(VAEShell):
         encoder = RNNEncoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
                              self.params['dropout'], self.params['bypass_bottleneck'], self.device)
         decoder = RNNDecoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
-                             self.params['dropout'], 125, self.params['teacher_force'], self.params['bypass_bottleneck'],
+                             self.params['dropout'], self.tgt_len, self.params['teacher_force'], self.params['bypass_bottleneck'],
                              self.device)
         generator = Generator(self.params['d_model'], self.vocab_size)
         src_embed = Embeddings(self.params['d_model'], self.vocab_size)

@@ -94,12 +94,22 @@ class KLAnnealer:
 
 ####### PREPROCESSING HELPERS ##########
 
-def smi_tokenizer(smile):
+def tokenizer(smile):
     "Tokenizes SMILES string"
     pattern =  "(\[[^\]]+]|Br?|Cl?|N|O|S|P|F|I|b|c|n|o|s|p|\(|\)|\.|=|#|-|\+|\\\\|\/|_|:|~|@|\?|>|\*|\$|\%[0-9]{2}|[0-9])"
     regezz = re.compile(pattern)
     tokens = [token for token in regezz.findall(smile)]
     assert smile == ''.join(tokens), ("{} could not be joined".format(smile))
+    return tokens
+
+#inspired by the Trans-Vae tokenizer
+def peptide_tokenizer(peptide):
+    "Tokenizes SMILES string"
+    #need to remove "X", "B", "Z", "U"
+    pattern =  "(G|A|L|M|F|W|K|Q|E|S|P|V|I|C|Y|H|R|N|D|T|X|B|Z|U)"
+    regezz = re.compile(pattern)
+    tokens = [token for token in regezz.findall(peptide)]
+    assert peptide == ''.join(tokens), ("{} could not be joined".format(peptide))
     return tokens
 
 def build_org_dict(char_dict):
@@ -111,15 +121,15 @@ def build_org_dict(char_dict):
             org_dict[int(v-1)] = k
     return org_dict
 
-def encode_smiles(smile, max_len, char_dict):
-    "Converts tokenized SMILES string to list of token ids"
-    for i in range(max_len - len(smile)):
+def encode_seq(sequence, max_len, char_dict):
+    "Converts tokenized sequences to list of token ids"
+    for i in range(max_len - len(sequence)):
         if i == 0:
-            smile.append('<end>')
+            sequence.append('<end>')
         else:
-            smile.append('_')
-    smile_vec = [char_dict[c] for c in smile]
-    return smile_vec
+            sequence.append('_')
+    seq_vec = [char_dict[c] for c in sequence] #map all characters to their respective numbers
+    return seq_vec
 
 def get_char_weights(train_smiles, params, freq_penalty=0.5):
     "Calculates token weights for a set of input data"
@@ -232,7 +242,7 @@ def calc_token_lengths(smiles):
     "Calculates the token lengths of a set of SMILES strings"
     lens = []
     for smi in smiles:
-        smi = smi_tokenizer(smi)
+        smi = tokenizer(smi)
         lens.append(len(smi))
     return lens
 
@@ -327,12 +337,14 @@ def cross_diversity(set1, set2, bs1=5000, bs2=5000, p=1, agg='max',
 
 
 ####### GRADIENT TROUBLESHOOTING #########
+#this needs to be used right after a call to "backwards" has been initiated so that the gradient is there
 
 def plot_grad_flow(named_parameters):
     ave_grads = []
     layers = []
     for n, p in named_parameters:
         if(p.requires_grad) and ("bias" not in n):
+            print(n,p.grad)
             layers.append(n)
             ave_grads.append(p.grad.abs().mean())
     layers = np.array(layers)

@@ -32,7 +32,7 @@ class VAEShell():
         if 'BATCH_SIZE' not in self.params.keys():
             self.params['BATCH_SIZE'] = 500
         if 'BATCH_CHUNKS' not in self.params.keys():
-            self.params['BATCH_CHUNKS'] = 5
+            self.params['BATCH_CHUNKS'] = 1
         if 'BETA_INIT' not in self.params.keys():
             self.params['BETA_INIT'] = 1e-8
         if 'BETA' not in self.params.keys():
@@ -83,7 +83,7 @@ class VAEShell():
                               'params': self.params}
         self.loaded_from = None
 
-    def save(self, state, fn, path='checkpoints', use_name=True):
+    def save(self, state, fn, path='checkpointz', use_name=True):
         print("VAE_Shell save called /n")
         """
         Saves current model state to .ckpt file
@@ -107,8 +107,14 @@ class VAEShell():
             save_path = os.path.join(path, fn)
         else:
             save_path = fn
-        torch.save(state, save_path)
-
+        if self.params['DDP']:
+            torch.save(state, save_path)
+            os.system("cp {} ~/scratch".format(save_path))
+        else:
+            torch.save(state, save_path)
+        
+        
+        
     def load(self, checkpoint_path):
         print("VAE_Shell load called /n")
         """
@@ -120,6 +126,7 @@ class VAEShell():
         loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.loaded_from = checkpoint_path
         for k in self.current_state.keys():
+            print(k)
             try:
                 self.current_state[k] = loaded_checkpoint[k]
             except KeyError:
@@ -139,6 +146,18 @@ class VAEShell():
         self.vocab_size = len(self.params['CHAR_DICT'].keys())
         self.pad_idx = self.params['CHAR_DICT']['_']
         self.build_model()
+        
+#         # This is temporararily necessary because of saving not being properly done on Compute Canada model
+#         state_dict = self.current_state['model_state_dict']
+#         # create new OrderedDict that does not contain `module.`
+#         from collections import OrderedDict
+#         new_state_dict = OrderedDict()
+#         for k, v in state_dict.items():
+#             print(k)
+#             name = k[7:] # remove `module.`
+#             new_state_dict[name] = v
+#         # load params
+#         self.model.load_state_dict(new_state_dict)
         self.model.load_state_dict(self.current_state['model_state_dict'])
         if self.model_type == 'aae': #load the aae generator and discriminator optimizers separately
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
@@ -169,8 +188,8 @@ class VAEShell():
   
         ### Prepare data iterators
 
-        train_data = self.data_gen(train_mols, train_props, char_dict=self.params['CHAR_DICT'])
-        val_data = self.data_gen(val_mols, val_props, char_dict=self.params['CHAR_DICT'])
+        train_data = self.data_gen(train_mols,self.src_len, self.name, train_props, char_dict=self.params['CHAR_DICT'])
+        val_data = self.data_gen(val_mols, self.src_len, self.name, val_props, char_dict=self.params['CHAR_DICT'])
         #SPECIAL DATA INPUT FOR DDP
         if self.params['DDP']:
             train_sampler = torch.utils.data.distributed.DistributedSampler(train_data, shuffle=True)
@@ -564,7 +583,7 @@ class VAEShell():
                                    token ids
             mems (np.array): Array of model memory vectors
         """
-        data = vae_data_gen(data, char_dict=self.params['CHAR_DICT'])
+        data = vae_data_gen(data,max_len=self.src_len,name=self.name, char_dict=self.params['CHAR_DICT'])
 
         data_iter = torch.utils.data.DataLoader(data,
                                                 batch_size=self.params['BATCH_SIZE'],
@@ -671,7 +690,7 @@ class VAEShell():
             mus(np.array): Mean memory array (prior to reparameterization)
             logvars(np.array): Log variance array (prior to reparameterization)
         """
-        data = vae_data_gen(data, props=None, char_dict=self.params['CHAR_DICT'])
+        data = vae_data_gen(data, max_len=self.src_len,name=self.name,props=None, char_dict=self.params['CHAR_DICT'])
 
         data_iter = torch.utils.data.DataLoader(data,
                                                 batch_size=self.params['BATCH_SIZE'],
@@ -1183,14 +1202,14 @@ class PropertyPredictor(nn.Module):
 ############## Embedding Layers ###################
 
 class Embeddings(nn.Module):
-    "Transforms input token id tensors to size d_model embeddings"
+    "Transforms input token id tensors to size d_model embeddings. Importantly this embedding is learnable! Weights change with backprop."
     def __init__(self, d_model, vocab):
         super().__init__()
         self.lut = nn.Embedding(vocab, d_model)
         self.d_model = d_model
 
     def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model)
+        return self.lut(x) * math.sqrt(self.d_model) #apparently square root might be for the transformer model to keep num's low
 
 class PositionalEncoding(nn.Module):
     "Static sinusoidal positional encoding layer"

@@ -8,3 +8,4 @@
 *.zip
 *.txt
 *.dict
+main_model/data/peptides/500_fasta.fasta

@@ -7,7 +7,7 @@ from torch.autograd import Variable
 
 from transvae.tvae_util import *
 
-def vae_data_gen(mols, props=None, char_dict=None):
+def vae_data_gen(data, max_len=126, name=None, props=None, char_dict=None):
     """
     Encodes input smiles to tensors with token ids
 
@@ -19,17 +19,23 @@ def vae_data_gen(mols, props=None, char_dict=None):
         encoded_data (torch.tensor): Tensor containing encodings for each
                                      SMILES string
     """
-    smiles = mols[:,0]
+    print(name)
+    seq_list = data[:,0] #unpackage the smiles: mols is a list of lists of smiles (lists of characters) 
+    #print(smiles)
     if props is None:
-        props = np.zeros(smiles.shape)
-    del mols
-    smiles = [smi_tokenizer(x) for x in smiles]
-    encoded_data = torch.empty((len(smiles), 128))
-    for j, smi in enumerate(smiles):
-        encoded_smi = encode_smiles(smi, 126, char_dict)
-        encoded_smi = [0] + encoded_smi
-        encoded_data[j,:-1] = torch.tensor(encoded_smi)
+        props = np.zeros(seq_list.shape)
+    del data
+    if name.split('_')[1]=='peptide':  #separate sequence into list of chars e.g. 'CC1c2'-->['C''C''1''c''2']
+        seq_list = [peptide_tokenizer(x) for x in seq_list]     #use peptide_tokenizer                  
+    else: 
+        seq_list = [tokenizer(x) for x in seq_list] 
+    encoded_data = torch.empty((len(seq_list), max_len+2)) #empty tensor: (length of entire input data, max_seq_len + 2->{start & end})
+    for j, seq in enumerate(seq_list):
+        encoded_seq = encode_seq(seq, max_len, char_dict) #encode_smiles(smile,max_len,char_dict): char dict has format {"char":"number"}
+        encoded_seq = [0] + encoded_seq
+        encoded_data[j,:-1] = torch.tensor(encoded_seq)
         encoded_data[j,-1] = torch.tensor(props[j])
+    #print(encoded_data.shape,encoded_data)
     return encoded_data
 
 def make_std_mask(tgt, pad):

@@ -66,7 +66,7 @@ def train_parser():
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
     ### Hyperparameters
-    parser.add_argument('--batch_size', default=100, type=int)
+    parser.add_argument('--batch_size', default=500, type=int)
     parser.add_argument('--batch_chunks', default=1, type=int)
     parser.add_argument('--beta', default=0.05, type=float)
     parser.add_argument('--beta_init', default=1e-8, type=float)
@@ -77,7 +77,7 @@ def train_parser():
     parser.add_argument('--eps_scale', default=1, type=float)
     parser.add_argument('--epochs', default=100, type=int)
     ### Data Parameters
-    parser.add_argument('--data_source', choices=['zinc', 'pubchem', 'custom'],
+    parser.add_argument('--data_source', choices=['zinc', 'pubchem','peptide','custom'],
                         required=True, type=str)
     parser.add_argument('--train_mols_path', default=None, type=str)
     parser.add_argument('--test_mols_path', default=None, type=str)
@@ -140,5 +140,18 @@ def attn_parser():
     parser.add_argument('--shuffle', default=False, action='store_true')
     ### Save Parameters
     parser.add_argument('--save_path', default=None, type=str)
+
+    return parser
+
+def vocab_parser():
+    parser = argparse.ArgumentParser()
+    ### Vocab Parameters
+    parser.add_argument('--inputs', required=True, type=str)
+    parser.add_argument('--freq_penalty', default=0.5, type=float)
+    parser.add_argument('--pad_penalty', default=0.1, type=float)
+    parser.add_argument('--vocab_name', default='custom_char_dict', type=str)
+    parser.add_argument('--weights_name', default='custom_char_weights', type=str)
+    parser.add_argument('--save_dir', default='data', type=str)
+    parser.add_argument('--max_len', default=126, type=int)
 
     return parser
