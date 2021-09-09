@@ -69,8 +69,8 @@ class VAEShell():
         self.data_gen = vae_data_gen
 
         ### Sequence length hard-coded into model
-        self.src_len = 126
-        self.tgt_len = 125
+        self.src_len = 501
+        self.tgt_len = 500
 
         ### Build empty structures for data storage
         self.n_epochs = 0

@@ -105,8 +105,8 @@ def tokenizer(smile):
 #inspired by the Trans-Vae tokenizer
 def peptide_tokenizer(peptide):
     "Tokenizes SMILES string"
-    #need to remove "X", "B", "Z", "U"
-    pattern =  "(G|A|L|M|F|W|K|Q|E|S|P|V|I|C|Y|H|R|N|D|T|X|B|Z|U)"
+    #need to remove "X", "B", "Z", "U", "O"
+    pattern =  "(G|A|L|M|F|W|K|Q|E|S|P|V|I|C|Y|H|R|N|D|T|X|B|Z|U|O)"
     regezz = re.compile(pattern)
     tokens = [token for token in regezz.findall(peptide)]
     assert peptide == ''.join(tokens), ("{} could not be joined".format(peptide))
