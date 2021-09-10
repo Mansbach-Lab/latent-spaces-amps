@@ -180,7 +180,7 @@ def decode_mols(encoded_tensors, org_dict):
 def calc_reconstruction_accuracies(input_smiles, output_smiles):
     "Calculates SMILE, token and positional accuracies for a set of\
     input and reconstructed SMILES strings"
-    max_len = 126
+    max_len = 501
     smile_accs = []
     hits = 0
     misses = 0

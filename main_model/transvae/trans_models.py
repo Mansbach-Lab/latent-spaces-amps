@@ -56,7 +56,7 @@ class VAEShell():
         if 'INIT_METHOD' not in self.params.keys():
             self.params['INIT_METHOD'] = 'tcp://127.0.0.1:3456'
         if 'DIST_BACKEND' not in self.params.keys():
-            self.params['DIST_BACKEND'] = 'gloo'
+            self.params['DIST_BACKEND'] = 'nccl'
         if 'DISTRIBUTED' not in self.params.keys():
             self.params['DISTRIBUTED'] = True
         if 'WORLD_SIZE' not in self.params.keys():
@@ -147,18 +147,18 @@ class VAEShell():
         self.pad_idx = self.params['CHAR_DICT']['_']
         self.build_model()
         
-#         # This is temporararily necessary because of saving not being properly done on Compute Canada model
-#         state_dict = self.current_state['model_state_dict']
-#         # create new OrderedDict that does not contain `module.`
-#         from collections import OrderedDict
-#         new_state_dict = OrderedDict()
-#         for k, v in state_dict.items():
-#             print(k)
-#             name = k[7:] # remove `module.`
-#             new_state_dict[name] = v
-#         # load params
-#         self.model.load_state_dict(new_state_dict)
-        self.model.load_state_dict(self.current_state['model_state_dict'])
+        # This is temporararily necessary because of saving not being properly done on Compute Canada model
+        state_dict = self.current_state['model_state_dict']
+        # create new OrderedDict that does not contain `module.`
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            print(k)
+            name = k[7:] # remove `module.`
+            new_state_dict[name] = v
+        # load params
+        self.model.load_state_dict(new_state_dict)
+        #self.model.load_state_dict(self.current_state['model_state_dict'])
         if self.model_type == 'aae': #load the aae generator and discriminator optimizers separately
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
         else:

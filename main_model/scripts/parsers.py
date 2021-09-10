@@ -93,7 +93,7 @@ def train_parser():
     ### Distributed Data Parallel addition
 
     parser.add_argument('--init_method', default=None, type=str)
-    parser.add_argument('--dist_backend', default='gloo', type=str)
+    parser.add_argument('--dist_backend', default='nccl', type=str)
     parser.add_argument('--world_size', default=1, type=int)
     parser.add_argument('--distributed', action='store_true')
     parser.add_argument('--num_workers', type=int, default=0)
