@@ -5,13 +5,15 @@ import torch.nn.functional as F
 import math, copy, time
 from torch.autograd import Variable
 
-def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, beta=1):
+def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
     "Binary Cross Entropy Loss + Kiebler-Lublach Divergence"
     x = x.long()[:,1:] - 1 #drop the start token
     x = x.contiguous().view(-1) #squeeze into 1 tensor size num_batches*max_seq_len
     x_out = x_out.contiguous().view(-1, x_out.size(2)) # squeeze first and second dims matching above, keeping the 25 class dims.
-    BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights)  #smiles strings have 25 classes or characters (check len(weights))
+
     KLD = beta * -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
+    BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights)  #smiles strings have 25 classes or characters (check len(weights))
+
     if pred_prop is not None:
         MSE = F.mse_loss(pred_prop.squeeze(-1), true_prop)
     else:

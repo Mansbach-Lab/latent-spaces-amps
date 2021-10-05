@@ -1,0 +1,301 @@
+created virtual environment CPython3.8.10.final.0-64 in 11241ms
+  creator CPython3Posix(dest=/localscratch/srenaud.14771360.0/ENV, clear=False, global=False)
+  seeder FromAppData(download=False, pip=latest, setuptools=latest, wheel=latest, via=copy, app_data_dir=/home/srenaud/.local/share/virtualenv/seed-app-data/v1.0.1)
+  activators BashActivator,CShellActivator,FishActivator,PowerShellActivator,PythonActivator,XonshActivator
+data
+ENV
+Ignoring pip: markers 'python_version < "3"' don't match your environment
+Looking in links: /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/avx2, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic, /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic
+Collecting transvae
+  Using cached transvae-0.6.1-py3-none-any.whl (31 kB)
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/torch-1.9.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/pandas-1.3.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/sklearn-0.0+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/scipy-1.7.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/seaborn-0.11.2+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/numpy-1.21.0+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/matplotlib-3.4.2+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/typing_extensions-3.10.0.2+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/python_dateutil-2.8.2+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pytz-2021.1+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/scikit_learn-0.24.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/cycler-0.10.0+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/gentoo/generic/Pillow-8.3.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/pyparsing-2.4.7+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/kiwisolver-1.3.1+computecanada-cp38-cp38-linux_x86_64.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/six-1.16.0+computecanada-py2.py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/joblib-1.0.1+computecanada-py3-none-any.whl
+Processing /cvmfs/soft.computecanada.ca/custom/python/wheelhouse/generic/threadpoolctl-2.2.0+computecanada-py3-none-any.whl
+Installing collected packages: typing-extensions, torch, six, python-dateutil, pytz, numpy, pandas, joblib, threadpoolctl, scipy, scikit-learn, sklearn, cycler, pillow, pyparsing, kiwisolver, matplotlib, seaborn, transvae
+Successfully installed cycler-0.10.0+computecanada joblib-1.0.1+computecanada kiwisolver-1.3.1+computecanada matplotlib-3.4.2+computecanada numpy-1.21.0+computecanada pandas-1.3.0+computecanada pillow-8.3.1+computecanada pyparsing-2.4.7+computecanada python-dateutil-2.8.2+computecanada pytz-2021.1+computecanada scikit-learn-0.24.1+computecanada scipy-1.7.1+computecanada seaborn-0.11.2+computecanada six-1.16.0+computecanada sklearn-0.0+computecanada threadpoolctl-2.2.0+computecanada torch-1.9.0+computecanada transvae-0.6.1 typing-extensions-3.10.0.2+computecanada
+r0 master: cdr901.int.cedar.computecanada.ca
+GPUs per node: 4
+GPUs per node: 4
+GPUs per node: 4
+GPUs per node: 4
+process group ready!
+process group ready!
+process group ready!
+process group ready!
+final check
+final check
+final check
+sh: 1,: command not found
+sh: 1,: command not found
+sh: 1,: command not found
+final check
+sh: 1,: command not found
+Epoch - 1 Train - 2.8270392287861217 Val - 2.7217416763305664 KLBeta - 1e-08 Epoch time - -11.09471
+Epoch - 1 Train - 2.8274843259291216 Val - 2.715533494949341 KLBeta - 1e-08 Epoch time - -10.89884
+Epoch - 1 Train - 2.825125806981867 Val - 2.7190729777018228 KLBeta - 1e-08 Epoch time - -11.19217
+Epoch - 1 Train - 2.829223299026489 Val - 2.7179410457611084 KLBeta - 1e-08 Epoch time - -11.06151
+Epoch - 2 Train - 2.715118070082231 Val - 2.700383186340332 KLBeta - 0.0010000098 Epoch time - -10.80678
+Epoch - 2 Train - 2.7161714163693516 Val - 2.693216403325399 KLBeta - 0.0010000098 Epoch time - -10.80632
+Epoch - 2 Train - 2.7134615074504507 Val - 2.697934865951538 KLBeta - 0.0010000098 Epoch time - -10.80893
+Epoch - 2 Train - 2.7175905487754126 Val - 2.6960338751475015 KLBeta - 0.0010000098 Epoch time - -10.80788
+Epoch - 3 Train - 2.6969764536077325 Val - 2.6870833237965903 KLBeta - 0.0020000096 Epoch time - -10.81605
+Epoch - 3 Train - 2.698135484348644 Val - 2.6796817779541016 KLBeta - 0.0020000096 Epoch time - -10.81777
+Epoch - 3 Train - 2.6954902865669945 Val - 2.6853369871775308 KLBeta - 0.0020000096 Epoch time - -10.81787
+Epoch - 3 Train - 2.699325349114158 Val - 2.6825737953186035 KLBeta - 0.0020000096 Epoch time - -10.81602
+Epoch - 4 Train - 2.683884421261874 Val - 2.674792766571045 KLBeta - 0.0030000094 Epoch time - -10.81106
+Epoch - 4 Train - 2.6851191867481576 Val - 2.6673216025034585 KLBeta - 0.0030000094 Epoch time - -10.8105
+Epoch - 4 Train - 2.6827945839275014 Val - 2.6734844048817954 KLBeta - 0.0030000094 Epoch time - -10.81129
+Epoch - 4 Train - 2.6865491390228273 Val - 2.670151948928833 KLBeta - 0.0030000094 Epoch time - -10.81274
+Epoch - 5 Train - 2.6711475502360953 Val - 2.663779894510905 KLBeta - 0.0040000092 Epoch time - -10.80475
+Epoch - 5 Train - 2.672201304002242 Val - 2.6563876469930015 KLBeta - 0.0040000092 Epoch time - -10.80722
+Epoch - 5 Train - 2.66970289403742 Val - 2.6625622113545737 KLBeta - 0.0040000092 Epoch time - -10.80873
+Epoch - 5 Train - 2.6734058380126955 Val - 2.658979574839274 KLBeta - 0.0040000092 Epoch time - -10.8075
+cp: cannot create regular file '/home/srenaud/scratch/005_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/005_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/005_rnn-128_peptide.ckpt': File exists
+Epoch - 6 Train - 2.660422117059881 Val - 2.67444642384847 KLBeta - 0.005000009 Epoch time - -10.81994
+Epoch - 6 Train - 2.6614597233858976 Val - 2.6682194073994956 KLBeta - 0.005000009 Epoch time - -10.8188
+Epoch - 6 Train - 2.6590301687067206 Val - 2.673997402191162 KLBeta - 0.005000009 Epoch time - -10.80852
+Epoch - 6 Train - 2.662631624395197 Val - 2.6706682046254477 KLBeta - 0.005000009 Epoch time - -10.8188
+Epoch - 7 Train - 2.656826691194014 Val - 2.6465560595194497 KLBeta - 0.0060000088 Epoch time - -10.81307
+Epoch - 7 Train - 2.6581013852899726 Val - 2.638913631439209 KLBeta - 0.0060000088 Epoch time - -10.81395
+Epoch - 7 Train - 2.6556214505975895 Val - 2.645482858022054 KLBeta - 0.0060000088 Epoch time - -10.81487
+Epoch - 7 Train - 2.659145736694336 Val - 2.6416424910227456 KLBeta - 0.0060000088 Epoch time - -10.81366
+Epoch - 8 Train - 2.6394959926605224 Val - 2.6334073543548584 KLBeta - 0.0070000086 Epoch time - -10.80629
+Epoch - 8 Train - 2.6406445199793036 Val - 2.6264116764068604 KLBeta - 0.0070000086 Epoch time - -10.80711
+Epoch - 8 Train - 2.638105617869984 Val - 2.633326768875122 KLBeta - 0.0070000086 Epoch time - -10.81018
+Epoch - 8 Train - 2.6417421731081876 Val - 2.629085063934326 KLBeta - 0.0070000086 Epoch time - -10.809
+Epoch - 9 Train - 2.624580144882202 Val - 2.6210012435913086 KLBeta - 0.0080000084 Epoch time - -10.80172
+Epoch - 9 Train - 2.6259009274569425 Val - 2.6139837900797525 KLBeta - 0.0080000084 Epoch time - -10.80283
+Epoch - 9 Train - 2.6234409765763718 Val - 2.620701551437378 KLBeta - 0.0080000084 Epoch time - -10.80088
+Epoch - 9 Train - 2.626895553415472 Val - 2.6166470845540366 KLBeta - 0.0080000084 Epoch time - -10.80087
+Epoch - 10 Train - 2.6171430327675558 Val - 2.6147607962290444 KLBeta - 0.0090000082 Epoch time - -10.80092
+Epoch - 10 Train - 2.618433627215299 Val - 2.607801914215088 KLBeta - 0.0090000082 Epoch time - -10.80127
+Epoch - 10 Train - 2.6158992420543323 Val - 2.613234043121338 KLBeta - 0.0090000082 Epoch time - -10.80256
+Epoch - 10 Train - 2.6194459178230978 Val - 2.6101580460866294 KLBeta - 0.0090000082 Epoch time - -10.8014
+cp: cannot create regular file '/home/srenaud/scratch/010_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/010_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/010_rnn-128_peptide.ckpt': File exists
+Epoch - 11 Train - 2.6048434430902656 Val - 2.598228931427002 KLBeta - 0.010000008 Epoch time - -10.83517
+Epoch - 11 Train - 2.606145459955389 Val - 2.5916399161020913 KLBeta - 0.010000008 Epoch time - -10.83593
+Epoch - 11 Train - 2.603525109724565 Val - 2.5972408453623452 KLBeta - 0.010000008 Epoch time - -10.82495
+Epoch - 11 Train - 2.6073561321605334 Val - 2.593837022781372 KLBeta - 0.010000008 Epoch time - -10.8359
+Epoch - 12 Train - 2.5918162085793237 Val - 2.5845022996266684 KLBeta - 0.0110000078 Epoch time - -10.80385
+Epoch - 12 Train - 2.5932173382152213 Val - 2.5778777599334717 KLBeta - 0.0110000078 Epoch time - -10.8054
+Epoch - 12 Train - 2.59070145000111 Val - 2.5837294260660806 KLBeta - 0.0110000078 Epoch time - -10.80738
+Epoch - 12 Train - 2.5943538102236663 Val - 2.580044984817505 KLBeta - 0.0110000078 Epoch time - -10.80696
+Epoch - 13 Train - 2.583880242434415 Val - 2.590185006459554 KLBeta - 0.0120000076 Epoch time - -10.80164
+Epoch - 13 Train - 2.5851570649580524 Val - 2.583900054295858 KLBeta - 0.0120000076 Epoch time - -10.80376
+Epoch - 13 Train - 2.5827166470614347 Val - 2.589765469233195 KLBeta - 0.0120000076 Epoch time - -10.80205
+Epoch - 13 Train - 2.586256217956543 Val - 2.5863146781921387 KLBeta - 0.0120000076 Epoch time - -10.80143
+Epoch - 14 Train - 2.575565043362704 Val - 2.572260538736979 KLBeta - 0.0130000074 Epoch time - -10.81313
+Epoch - 14 Train - 2.5767938830635764 Val - 2.5657874743143716 KLBeta - 0.0130000074 Epoch time - -10.81323
+Epoch - 14 Train - 2.577675364234231 Val - 2.5678505102793374 KLBeta - 0.0130000074 Epoch time - -10.81329
+Epoch - 14 Train - 2.5740555199709805 Val - 2.571218252182007 KLBeta - 0.0130000074 Epoch time - -10.81385
+Epoch - 15 Train - 2.57110875303095 Val - 2.5570572217305503 KLBeta - 0.0140000072 Epoch time - -10.80552
+Epoch - 15 Train - 2.572476690465754 Val - 2.5496841271718345 KLBeta - 0.0140000072 Epoch time - -10.80624
+Epoch - 15 Train - 2.5697082649577747 Val - 2.556079069773356 KLBeta - 0.0140000072 Epoch time - -10.80652
+Epoch - 15 Train - 2.5735070878809148 Val - 2.5522728761037192 KLBeta - 0.0140000072 Epoch time - -10.80603
+cp: cannot create regular file '/home/srenaud/scratch/015_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/015_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/015_rnn-128_peptide.ckpt': File exists
+Epoch - 16 Train - 2.5542860464616255 Val - 2.548742930094401 KLBeta - 0.015000007 Epoch time - -10.82473
+Epoch - 16 Train - 2.5554307287389584 Val - 2.5417086283365884 KLBeta - 0.015000007 Epoch time - -10.82521
+Epoch - 16 Train - 2.5528704686598345 Val - 2.547996918360392 KLBeta - 0.015000007 Epoch time - -10.81423
+Epoch - 16 Train - 2.5564950942993163 Val - 2.5440056324005127 KLBeta - 0.015000007 Epoch time - -10.82535
+Epoch - 17 Train - 2.5446392146023835 Val - 2.5409119923909507 KLBeta - 0.0160000068 Epoch time - -10.80203
+Epoch - 17 Train - 2.5428834048184483 Val - 2.540735403696696 KLBeta - 0.0160000068 Epoch time - -10.8028
+Epoch - 17 Train - 2.5466435605829414 Val - 2.5357054074605307 KLBeta - 0.0160000068 Epoch time - -10.80275
+Epoch - 17 Train - 2.5455373720689254 Val - 2.5344084898630777 KLBeta - 0.0160000068 Epoch time - -10.80202
+Epoch - 18 Train - 2.5350154529918325 Val - 2.5263283252716064 KLBeta - 0.0170000066 Epoch time - -10.80373
+Epoch - 18 Train - 2.5360257582231003 Val - 2.518376032511393 KLBeta - 0.0170000066 Epoch time - -10.8041
+Epoch - 18 Train - 2.5335078716278074 Val - 2.5254054069519043 KLBeta - 0.0170000066 Epoch time - -10.80691
+Epoch - 18 Train - 2.53693584095348 Val - 2.520768165588379 KLBeta - 0.0170000066 Epoch time - -10.80587
+Epoch - 19 Train - 2.5256317485462536 Val - 2.5213120778401694 KLBeta - 0.0180000064 Epoch time - -10.80656
+Epoch - 19 Train - 2.526815756884488 Val - 2.514779965082804 KLBeta - 0.0180000064 Epoch time - -10.80734
+Epoch - 19 Train - 2.5240671287883414 Val - 2.521159013112386 KLBeta - 0.0180000064 Epoch time - -10.80903
+Epoch - 19 Train - 2.527595359628851 Val - 2.5158894856770835 KLBeta - 0.0180000064 Epoch time - -10.80802
+Epoch - 20 Train - 2.5160907008431175 Val - 2.5053014755249023 KLBeta - 0.019000006200000003 Epoch time - -10.80105
+Epoch - 20 Train - 2.517515620318326 Val - 2.497875690460205 KLBeta - 0.019000006200000003 Epoch time - -10.80105
+Epoch - 20 Train - 2.5145684372295034 Val - 2.5039467016855874 KLBeta - 0.019000006200000003 Epoch time - -10.80131
+Epoch - 20 Train - 2.518366735631769 Val - 2.4988907178243003 KLBeta - 0.019000006200000003 Epoch time - -10.8009
+cp: cannot create regular file '/home/srenaud/scratch/020_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/020_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/020_rnn-128_peptide.ckpt': File exists
+Epoch - 21 Train - 2.507321990620006 Val - 2.5001304149627686 KLBeta - 0.020000006 Epoch time - -10.81082
+Epoch - 21 Train - 2.5087550336664375 Val - 2.493436257044474 KLBeta - 0.020000006 Epoch time - -10.79916
+Epoch - 21 Train - 2.5059037165208298 Val - 2.499366839726766 KLBeta - 0.020000006 Epoch time - -10.81158
+Epoch - 21 Train - 2.509640663320368 Val - 2.4948678811391196 KLBeta - 0.020000006 Epoch time - -10.81104
+Epoch - 22 Train - 2.4979538440704347 Val - 2.4942469596862793 KLBeta - 0.0210000058 Epoch time - -10.80306
+Epoch - 22 Train - 2.499414149197665 Val - 2.487366199493408 KLBeta - 0.0210000058 Epoch time - -10.80346
+Epoch - 22 Train - 2.496522235870361 Val - 2.493436257044474 KLBeta - 0.0210000058 Epoch time - -10.80486
+Epoch - 22 Train - 2.500192551179366 Val - 2.487645069758097 KLBeta - 0.0210000058 Epoch time - -10.80398
+Epoch - 23 Train - 2.488267274336381 Val - 2.4772772789001465 KLBeta - 0.0220000056 Epoch time - -10.79685
+Epoch - 23 Train - 2.489918665452437 Val - 2.4699393113454184 KLBeta - 0.0220000056 Epoch time - -10.79651
+Epoch - 23 Train - 2.486733254519376 Val - 2.4762616952260337 KLBeta - 0.0220000056 Epoch time - -10.79792
+Epoch - 23 Train - 2.4906072399832984 Val - 2.471099376678467 KLBeta - 0.0220000056 Epoch time - -10.79691
+Epoch - 24 Train - 2.48034593408758 Val - 2.4623072942097983 KLBeta - 0.023000005400000002 Epoch time - -10.80486
+Epoch - 24 Train - 2.481569528579712 Val - 2.455681006113688 KLBeta - 0.023000005400000002 Epoch time - -10.80534
+Epoch - 24 Train - 2.4786664442582564 Val - 2.462259372075399 KLBeta - 0.023000005400000002 Epoch time - -10.80661
+Epoch - 24 Train - 2.4824661124836314 Val - 2.457051912943522 KLBeta - 0.023000005400000002 Epoch time - -10.80574
+Epoch - 25 Train - 2.4721664732152764 Val - 2.4620140393575034 KLBeta - 0.0240000052 Epoch time - -10.81404
+Epoch - 25 Train - 2.4735362096266313 Val - 2.455371936162313 KLBeta - 0.0240000052 Epoch time - -10.81409
+Epoch - 25 Train - 2.470376313816417 Val - 2.461644013722738 KLBeta - 0.0240000052 Epoch time - -10.81513
+Epoch - 25 Train - 2.4745658224279232 Val - 2.456839164098104 KLBeta - 0.0240000052 Epoch time - -10.81471
+cp: cannot create regular file '/home/srenaud/scratch/025_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/025_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/025_rnn-128_peptide.ckpt': File exists
+Epoch - 26 Train - 2.4628060297532515 Val - 2.4449374675750732 KLBeta - 0.025000005 Epoch time - -10.83189
+Epoch - 26 Train - 2.4668693022294477 Val - 2.4399699370066323 KLBeta - 0.025000005 Epoch time - -10.83156
+Epoch - 26 Train - 2.464936126362194 Val - 2.444847265879313 KLBeta - 0.025000005 Epoch time - -10.83135
+Epoch - 26 Train - 2.4662821292877197 Val - 2.438172976175944 KLBeta - 0.025000005 Epoch time - -10.81974
+Epoch - 27 Train - 2.4572542493993588 Val - 2.43315855662028 KLBeta - 0.0260000048 Epoch time - -10.81855
+Epoch - 27 Train - 2.458666719089855 Val - 2.426785866419474 KLBeta - 0.0260000048 Epoch time - -10.81912
+Epoch - 27 Train - 2.455335270274769 Val - 2.4336326122283936 KLBeta - 0.0260000048 Epoch time - -10.82109
+Epoch - 27 Train - 2.4590553933923895 Val - 2.42792018254598 KLBeta - 0.0260000048 Epoch time - -10.82081
+Epoch - 28 Train - 2.450115429271351 Val - 2.4272772471110025 KLBeta - 0.027000004600000002 Epoch time - -10.80684
+Epoch - 28 Train - 2.451779573613947 Val - 2.4208536942799888 KLBeta - 0.027000004600000002 Epoch time - -10.80673
+Epoch - 28 Train - 2.448192925886674 Val - 2.4273359775543213 KLBeta - 0.027000004600000002 Epoch time - -10.80679
+Epoch - 28 Train - 2.452369715950706 Val - 2.4229235649108887 KLBeta - 0.027000004600000002 Epoch time - -10.80638
+Epoch - 29 Train - 2.443059609153054 Val - 2.4211944739023843 KLBeta - 0.0280000044 Epoch time - -10.81262
+Epoch - 29 Train - 2.441419098593972 Val - 2.422213315963745 KLBeta - 0.0280000044 Epoch time - -10.81206
+Epoch - 29 Train - 2.445569727637551 Val - 2.417252699534098 KLBeta - 0.0280000044 Epoch time - -10.81212
+Epoch - 29 Train - 2.445081667466597 Val - 2.415693680445353 KLBeta - 0.0280000044 Epoch time - -10.81219
+Epoch - 30 Train - 2.437313665043224 Val - 2.4098873138427734 KLBeta - 0.0290000042 Epoch time - -10.80432
+Epoch - 30 Train - 2.4383881612257525 Val - 2.40436061223348 KLBeta - 0.0290000042 Epoch time - -10.8042
+Epoch - 30 Train - 2.4352328820662064 Val - 2.4109764099121094 KLBeta - 0.0290000042 Epoch time - -10.80532
+Epoch - 30 Train - 2.439321162483909 Val - 2.405400037765503 KLBeta - 0.0290000042 Epoch time - -10.80489
+cp: cannot create regular file '/home/srenaud/scratch/030_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/030_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/030_rnn-128_peptide.ckpt': File exists
+Epoch - 31 Train - 2.4304735833948308 Val - 2.397770961125692 KLBeta - 0.030000004 Epoch time - -10.81054
+Epoch - 31 Train - 2.4319700717926027 Val - 2.3912020524342856 KLBeta - 0.030000004 Epoch time - -10.82085
+Epoch - 31 Train - 2.4284383123571223 Val - 2.3982062339782715 KLBeta - 0.030000004 Epoch time - -10.81146
+Epoch - 31 Train - 2.4327272978695955 Val - 2.3930160999298096 KLBeta - 0.030000004 Epoch time - -10.81085
+Epoch - 32 Train - 2.424482904780995 Val - 2.3970065911610923 KLBeta - 0.031000003800000002 Epoch time - -10.81127
+Epoch - 32 Train - 2.4225238063118675 Val - 2.397024154663086 KLBeta - 0.031000003800000002 Epoch time - -10.81219
+Epoch - 32 Train - 2.4268751751292834 Val - 2.392900069554647 KLBeta - 0.031000003800000002 Epoch time - -10.81196
+Epoch - 32 Train - 2.426055010882291 Val - 2.391272703806559 KLBeta - 0.031000003800000002 Epoch time - -10.81127
+Epoch - 33 Train - 2.41853215044195 Val - 2.389432668685913 KLBeta - 0.0320000036 Epoch time - -10.80667
+Epoch - 33 Train - 2.420297956466675 Val - 2.383972406387329 KLBeta - 0.0320000036 Epoch time - -10.80669
+Epoch - 33 Train - 2.41654766256159 Val - 2.390812714894613 KLBeta - 0.0320000036 Epoch time - -10.80729
+Epoch - 33 Train - 2.4209581331773236 Val - 2.3860034942626953 KLBeta - 0.0320000036 Epoch time - -10.80694
+Epoch - 34 Train - 2.412549062208696 Val - 2.377030690511068 KLBeta - 0.0330000034 Epoch time - -10.80492
+Epoch - 34 Train - 2.41042047847401 Val - 2.3772623538970947 KLBeta - 0.0330000034 Epoch time - -10.80636
+Epoch - 34 Train - 2.4148954781618985 Val - 2.372298081715902 KLBeta - 0.0330000034 Epoch time - -10.80566
+Epoch - 34 Train - 2.414266989447854 Val - 2.3697165648142495 KLBeta - 0.0330000034 Epoch time - -10.80514
+Epoch - 35 Train - 2.4064396554773504 Val - 2.372127056121826 KLBeta - 0.0340000032 Epoch time - -10.80365
+Epoch - 35 Train - 2.4079298929734665 Val - 2.3651655515034995 KLBeta - 0.0340000032 Epoch time - -10.80395
+Epoch - 35 Train - 2.404816575483842 Val - 2.3725287119547525 KLBeta - 0.0340000032 Epoch time - -10.80582
+Epoch - 35 Train - 2.4088800473646685 Val - 2.3673227628072104 KLBeta - 0.0340000032 Epoch time - -10.80567
+cp: cannot create regular file '/home/srenaud/scratch/035_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/035_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/035_rnn-128_peptide.ckpt': File exists
+Epoch - 36 Train - 2.4011770595203745 Val - 2.3658669789632163 KLBeta - 0.035000003 Epoch time - -10.82596
+Epoch - 36 Train - 2.4021596041592685 Val - 2.3584771951039634 KLBeta - 0.035000003 Epoch time - -10.82684
+Epoch - 36 Train - 2.398458225076849 Val - 2.3660640716552734 KLBeta - 0.035000003 Epoch time - -10.82832
+Epoch - 36 Train - 2.4030714641917834 Val - 2.3600146770477295 KLBeta - 0.035000003 Epoch time - -10.81717
+Epoch - 37 Train - 2.3950515747070313 Val - 2.356435934702555 KLBeta - 0.0360000028 Epoch time - -10.80876
+Epoch - 37 Train - 2.396536246213046 Val - 2.351325591405233 KLBeta - 0.0360000028 Epoch time - -10.80962
+Epoch - 37 Train - 2.392473246834495 Val - 2.357775608698527 KLBeta - 0.0360000028 Epoch time - -10.80973
+Epoch - 37 Train - 2.3970024542375046 Val - 2.3529537518819175 KLBeta - 0.0360000028 Epoch time - -10.80852
+Epoch - 38 Train - 2.391172491420399 Val - 2.3551693757375083 KLBeta - 0.0370000026 Epoch time - -10.81362
+Epoch - 38 Train - 2.3926424676721747 Val - 2.34967311223348 KLBeta - 0.0370000026 Epoch time - -10.81376
+Epoch - 38 Train - 2.3886562043970283 Val - 2.3574821949005127 KLBeta - 0.0370000026 Epoch time - -10.81397
+Epoch - 38 Train - 2.3933554606004193 Val - 2.3514672120412192 KLBeta - 0.0370000026 Epoch time - -10.81335
+Epoch - 39 Train - 2.3854217832738702 Val - 2.3475399812062583 KLBeta - 0.0380000024 Epoch time - -10.80593
+Epoch - 39 Train - 2.387095512043346 Val - 2.3417336146036782 KLBeta - 0.0380000024 Epoch time - -10.80707
+Epoch - 39 Train - 2.383010014620694 Val - 2.347900390625 KLBeta - 0.0380000024 Epoch time - -10.80806
+Epoch - 39 Train - 2.3874252622777767 Val - 2.3427393436431885 KLBeta - 0.0380000024 Epoch time - -10.80715
+Epoch - 40 Train - 2.381660626151345 Val - 2.344671646753947 KLBeta - 0.0390000022 Epoch time - -10.80717
+Epoch - 40 Train - 2.382942516153509 Val - 2.3374767303466797 KLBeta - 0.0390000022 Epoch time - -10.80823
+Epoch - 40 Train - 2.3788343039425937 Val - 2.345029910405477 KLBeta - 0.0390000022 Epoch time - -10.80845
+Epoch - 40 Train - 2.383649405566129 Val - 2.340228875478109 KLBeta - 0.0390000022 Epoch time - -10.80785
+cp: cannot create regular file '/home/srenaud/scratch/040_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/040_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/040_rnn-128_peptide.ckpt': File exists
+Epoch - 41 Train - 2.3764189893549137 Val - 2.3480567932128906 KLBeta - 0.040000002 Epoch time - -10.7973
+Epoch - 41 Train - 2.3777913570404055 Val - 2.342396338780721 KLBeta - 0.040000002 Epoch time - -10.80908
+Epoch - 41 Train - 2.373867572437633 Val - 2.349339326222738 KLBeta - 0.040000002 Epoch time - -10.81003
+Epoch - 41 Train - 2.3787637970664286 Val - 2.344464143117269 KLBeta - 0.040000002 Epoch time - -10.80926
+Epoch - 42 Train - 2.373276935924183 Val - 2.333388884862264 KLBeta - 0.0410000018 Epoch time - -10.81163
+Epoch - 42 Train - 2.3746431090615014 Val - 2.327385505040487 KLBeta - 0.0410000018 Epoch time - -10.81168
+Epoch - 42 Train - 2.3709267009388317 Val - 2.333913962046305 KLBeta - 0.0410000018 Epoch time - -10.8123
+Epoch - 42 Train - 2.3752950018102474 Val - 2.329608758290609 KLBeta - 0.0410000018 Epoch time - -10.81209
+Epoch - 43 Train - 2.3685716022144665 Val - 2.3224546909332275 KLBeta - 0.042000001599999996 Epoch time - -10.80586
+Epoch - 43 Train - 2.3703014157035134 Val - 2.317535161972046 KLBeta - 0.042000001599999996 Epoch time - -10.80641
+Epoch - 43 Train - 2.36613245010376 Val - 2.323684056599935 KLBeta - 0.042000001599999996 Epoch time - -10.80752
+Epoch - 43 Train - 2.370658102902499 Val - 2.318917433420817 KLBeta - 0.042000001599999996 Epoch time - -10.80649
+Epoch - 44 Train - 2.364235769618641 Val - 2.3254964351654053 KLBeta - 0.0430000014 Epoch time - -10.81664
+Epoch - 44 Train - 2.36585054397583 Val - 2.319728453954061 KLBeta - 0.0430000014 Epoch time - -10.81651
+Epoch - 44 Train - 2.362075237794356 Val - 2.327036460240682 KLBeta - 0.0430000014 Epoch time - -10.81859
+Epoch - 44 Train - 2.3662698485634546 Val - 2.3214261531829834 KLBeta - 0.0430000014 Epoch time - -10.81862
+Epoch - 45 Train - 2.3627744848077947 Val - 2.3173141479492188 KLBeta - 0.0440000012 Epoch time - -10.80614
+Epoch - 45 Train - 2.3637607747858222 Val - 2.311361312866211 KLBeta - 0.0440000012 Epoch time - -10.80786
+Epoch - 45 Train - 2.3605036908929997 Val - 2.31766144434611 KLBeta - 0.0440000012 Epoch time - -10.80795
+Epoch - 45 Train - 2.3647969592701306 Val - 2.3122902711232505 KLBeta - 0.0440000012 Epoch time - -10.80743
+cp: cannot create regular file '/home/srenaud/scratch/045_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/045_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/045_rnn-128_peptide.ckpt': File exists
+Epoch - 46 Train - 2.35665171363137 Val - 2.3159050146738687 KLBeta - 0.045000001 Epoch time - -10.82703
+Epoch - 46 Train - 2.3582133943384345 Val - 2.3098599116007485 KLBeta - 0.045000001 Epoch time - -10.82711
+Epoch - 46 Train - 2.354522163217718 Val - 2.3159313201904297 KLBeta - 0.045000001 Epoch time - -10.82703
+Epoch - 46 Train - 2.358786712993275 Val - 2.3115228017171225 KLBeta - 0.045000001 Epoch time - -10.81485
+Epoch - 47 Train - 2.3534232659773395 Val - 2.315164089202881 KLBeta - 0.0460000008 Epoch time - -10.80526
+Epoch - 47 Train - 2.3546709017320113 Val - 2.308998982111613 KLBeta - 0.0460000008 Epoch time - -10.80511
+Epoch - 47 Train - 2.350862962549383 Val - 2.314626852671305 KLBeta - 0.0460000008 Epoch time - -10.80554
+Epoch - 47 Train - 2.3555706587704743 Val - 2.3100745677948 KLBeta - 0.0460000008 Epoch time - -10.80531
+Epoch - 48 Train - 2.350154972076416 Val - 2.3058221340179443 KLBeta - 0.0470000006 Epoch time - -10.80361
+Epoch - 48 Train - 2.3519008029590953 Val - 2.2999876340230307 KLBeta - 0.0470000006 Epoch time - -10.80398
+Epoch - 48 Train - 2.3475797219709915 Val - 2.3055975437164307 KLBeta - 0.0470000006 Epoch time - -10.80437
+Epoch - 48 Train - 2.352172816883434 Val - 2.3003287315368652 KLBeta - 0.0470000006 Epoch time - -10.80384
+Epoch - 49 Train - 2.347642621127042 Val - 2.2989659309387207 KLBeta - 0.0480000004 Epoch time - -10.81314
+Epoch - 49 Train - 2.349580179561268 Val - 2.295062780380249 KLBeta - 0.0480000004 Epoch time - -10.81346
+Epoch - 49 Train - 2.3449985070662067 Val - 2.3001840909322104 KLBeta - 0.0480000004 Epoch time - -10.81379
+Epoch - 49 Train - 2.3495743144642223 Val - 2.2955658435821533 KLBeta - 0.0480000004 Epoch time - -10.8142
+Epoch - 50 Train - 2.3438858509063722 Val - 2.295447746912638 KLBeta - 0.0490000002 Epoch time - -10.81525
+Epoch - 50 Train - 2.3453439885919742 Val - 2.291707197825114 KLBeta - 0.0490000002 Epoch time - -10.81565
+Epoch - 50 Train - 2.3414505351673474 Val - 2.29712176322937 KLBeta - 0.0490000002 Epoch time - -10.8158
+Epoch - 50 Train - 2.345788999037309 Val - 2.2921855449676514 KLBeta - 0.0490000002 Epoch time - -10.81571
+cp: cannot create regular file '/home/srenaud/scratch/050_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/050_rnn-128_peptide.ckpt': File exists
+cp: cannot create regular file '/home/srenaud/scratch/050_rnn-128_peptide.ckpt': File exists
+main function called /n
+train_parser function called /n
+train function called /n
+parser model_init called /n
+rnn-128_peptide
+rnn-128_peptide
+main function called /n
+train_parser function called /n
+train function called /n
+parser model_init called /n
+rnn-128_peptide
+rnn-128_peptide
+main function called /n
+train_parser function called /n
+train function called /n
+parser model_init called /n
+rnn-128_peptide
+rnn-128_peptide
+main function called /n
+train_parser function called /n
+train function called /n
+parser model_init called /n
+rnn-128_peptide
+rnn-128_peptide

@@ -33,7 +33,6 @@ class RNNAttn(VAEShell):
                  d_pp=256, depth_pp=2,
                  load_fn=None):
         super().__init__(params, name)
-        print("RNNattn class init called /n")
         """
         Instatiating a GruaVAE object builds the model architecture, data structs
         to store the model parameters and training information and initiates model
@@ -79,7 +78,6 @@ class RNNAttn(VAEShell):
             self.load(load_fn)
 
     def build_model(self):
-        print("RNNattn class build_model called /n")
         """
         Build model architecture. This function is called during initialization as well as when
         loading a saved model checkpoint
@@ -121,7 +119,6 @@ class RNN(VAEShell):
                  bypass_bottleneck=False, property_predictor=False,
                  d_pp=256, depth_pp=2, load_fn=None):
         super().__init__(params, name)
-        print("RNN class init called /n")
         ### Set learning rate for Adam optimizer
         if 'ADAM_LR' not in self.params.keys():
             self.params['ADAM_LR'] = 3e-4
@@ -145,7 +142,6 @@ class RNN(VAEShell):
         if load_fn is None:
             if self.params['DDP']:
                 ### prepare distributed data parallel (added by Samuel Renaud)
-                #print
                 os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
                 ngpus_per_node = torch.cuda.device_count()
                 
@@ -185,7 +181,6 @@ class RNN(VAEShell):
             self.load(load_fn)
 
     def build_model(self):
-        print("RNN class build_model called /n")
         """
         Build model architecture. This function is called during initialization as well as when
         loading a saved model checkpoint

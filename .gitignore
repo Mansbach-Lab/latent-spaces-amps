@@ -9,3 +9,4 @@
 *.txt
 *.dict
 main_model/data/peptides/500_fasta.fasta
+main_model/data/peptides/500k/500_fasta.fasta
