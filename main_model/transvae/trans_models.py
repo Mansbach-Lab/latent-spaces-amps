@@ -68,8 +68,8 @@ class VAEShell():
         self.data_gen = vae_data_gen
 
         ### Sequence length hard-coded into model
-        self.src_len = 126
-        self.tgt_len = 125
+        self.src_len = 198
+        self.tgt_len = 197
 
         ### Build empty structures for data storage
         self.n_epochs = 0
@@ -276,8 +276,6 @@ class VAEShell():
                     true_prop = Variable(props_data)
                     src_mask = (src != self.pad_idx).unsqueeze(-2) #true or false according to sequence length
                     tgt_mask = make_std_mask(tgt, self.pad_idx) #cascading true false masking [true false...] [true true false...] ...
-                    print("line 279 src mask:",src_mask.shape)
-                    print("line 280 tgt mask:",tgt_mask.shape)
                         
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
@@ -934,7 +932,6 @@ class VAEEncoder(nn.Module):
         self.layers = clones(layer, N)
         self.conv_bottleneck = ConvBottleneck(layer.size, layer.src_len)
         self.flat_conv_out = self.conv_bottleneck.conv_list[-1] * self.conv_bottleneck.out_channels
-        print("line 936, encoder conv_out: ",self.flat_conv_out)
         self.z_means, self.z_var = nn.Linear(self.flat_conv_out, d_latent), nn.Linear(self.flat_conv_out, d_latent)
         self.norm = LayerNorm(layer.size)
         self.predict_len1 = nn.Linear(d_latent, d_latent*2)
@@ -971,7 +968,6 @@ class VAEEncoder(nn.Module):
             mem = self.conv_bottleneck(mem)
             mem = mem.contiguous().view(mem.size(0), -1)
             mu, logvar = self.z_means(mem), self.z_var(mem)
-            print("passed z_means and z_var")
             mem = self.reparameterize(mu, logvar, self.eps_scale)
             pred_len = self.predict_len1(mu)
             pred_len = self.predict_len2(pred_len)
@@ -1033,9 +1029,7 @@ class VAEDecoder(nn.Module):
     def forward(self, x, mem, src_mask, tgt_mask):
         ### Deconvolutional bottleneck (up-sampling)
         if not self.bypass_bottleneck:
-            print("memory shape: ",mem.shape)
             mem = F.relu(self.linear(mem))
-            print(self.conv_out)
             mem = mem.view(-1, 64, self.conv_out)
             mem = self.deconv_bottleneck(mem)
             mem = mem.permute(0, 2, 1)
@@ -1175,9 +1169,7 @@ class ConvBottleneck(nn.Module):
 
     def forward(self, x):
         for conv in self.conv_layers:
-            print("before conv",x.shape)
             x = F.relu(conv(x))
-            print("after conv",x.shape)
         return x
 
 class DeconvBottleneck(nn.Module):
@@ -1192,11 +1184,9 @@ class DeconvBottleneck(nn.Module):
         input_shape = src_len+1
         conv_list.insert(0,input_shape) #add the original source length to the conv shape list
         for i in range(3):
-            print("conv_list",conv_list[3-i])
             #formula to find appropriate kernel size for each layer:(L_out-1)-2(L_in-1)+1=K ,K:kernel_size,L_out:new_shape,L_in:old_shape
             L_in = conv_list[3-i]
             L_out = conv_list[3-(i+1)]
-            print("kernel_size =",(L_out-1)-2*(L_in-1)+1)
             out_d = (size - in_d) // 4 + in_d
             stride = 2
             kernel_size = (L_out-1)-2*(L_in-1)+1
@@ -1209,9 +1199,7 @@ class DeconvBottleneck(nn.Module):
 
     def forward(self, x):
         for deconv in self.deconv_layers:
-            print("before deconv: ",x.shape)
             x = F.relu(deconv(x))
-            print("after deconv: ",x.shape)
         return x
 
 ############## Property Predictor #################

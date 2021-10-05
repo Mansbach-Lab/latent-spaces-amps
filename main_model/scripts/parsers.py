@@ -59,9 +59,9 @@ def train_parser():
     ### Architecture Parameters
     parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn', 'aae', 'wae'],
                         required=True, type=str)
-    parser.add_argument('--d_model', default=128, type=int)
-    parser.add_argument('--d_feedforward', default=128, type=int)
-    parser.add_argument('--d_latent', default=128, type=int)
+    parser.add_argument('--d_model', default=200, type=int)
+    parser.add_argument('--d_feedforward', default=200, type=int)
+    parser.add_argument('--d_latent', default=200, type=int)
     parser.add_argument('--property_predictor', default=False, action='store_true')
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
