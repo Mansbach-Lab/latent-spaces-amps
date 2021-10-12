@@ -68,8 +68,8 @@ class VAEShell():
         self.data_gen = vae_data_gen
 
         ### Sequence length hard-coded into model
-        self.src_len = 198
-        self.tgt_len = 197
+        self.src_len = 126
+        self.tgt_len = 125
 
         ### Build empty structures for data storage
         self.n_epochs = 0
@@ -123,7 +123,9 @@ class VAEShell():
         if self.params['DDP']:
             map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
             loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
-        loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+            
+        else:
+            loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.loaded_from = checkpoint_path
         for k in self.current_state.keys():
             try:
@@ -248,6 +250,15 @@ class VAEShell():
 
         ### Epoch loop
         for epoch in range(epochs):
+        #this first set of lines synchronizes the GPUs for checkpoint loading using DDP
+            if self.params['DDP']:
+                ngpus_per_node = torch.cuda.device_count()
+                local_rank = int(os.environ.get("SLURM_LOCALID")) 
+                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
+            
+            if rank==0 or rank==1 or rank==2 or rank==3:
+                dist.barrier()
+        
             epoch_start_time= perf_counter()
             ### Train Loop
             self.model.train()
@@ -471,11 +482,15 @@ class VAEShell():
             else:
                 self.current_state['optimizer_state_dict'] = self.optimizer.state_dict
             #for DDP saving and loading below    
-            if self.params['DDP']:
-                ngpus_per_node = torch.cuda.device_count()
-                local_rank = int(os.environ.get("SLURM_LOCALID")) 
-                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-
+            #if self.params['DDP']:
+            #    ngpus_per_node = torch.cuda.device_count()
+            #    local_rank = int(os.environ.get("SLURM_LOCALID")) 
+            #    rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
+            #
+            #if rank==0 or rank==1 or rank==2 or rank==3:
+            #    os.system("!!blocking rank:{}!!".format(rank))
+            #    dist.barrier()
+            
             #if val_loss < self.best_loss:
             #    self.best_loss = val_loss
             #    self.current_state['best_loss'] = self.best_loss

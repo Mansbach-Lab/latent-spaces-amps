@@ -59,9 +59,9 @@ def train_parser():
     ### Architecture Parameters
     parser.add_argument('--model', choices=['transvae', 'rnnattn', 'rnn', 'aae', 'wae'],
                         required=True, type=str)
-    parser.add_argument('--d_model', default=200, type=int)
-    parser.add_argument('--d_feedforward', default=200, type=int)
-    parser.add_argument('--d_latent', default=200, type=int)
+    parser.add_argument('--d_model', default=128, type=int)
+    parser.add_argument('--d_feedforward', default=128, type=int)
+    parser.add_argument('--d_latent', default=128, type=int)
     parser.add_argument('--property_predictor', default=False, action='store_true')
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
@@ -75,7 +75,7 @@ def train_parser():
     parser.add_argument('--lr_scale', default=1, type=float)
     parser.add_argument('--warmup_steps', default=10000, type=int)
     parser.add_argument('--eps_scale', default=1, type=float)
-    parser.add_argument('--epochs', default=100, type=int)
+    parser.add_argument('--epochs', default=20, type=int)
     ### Data Parameters
     parser.add_argument('--data_source', choices=['zinc', 'pubchem','peptide','custom'],
                         required=True, type=str)
@@ -89,7 +89,7 @@ def train_parser():
     parser.add_argument('--checkpoint', default=None, type=str)
     ### Save Parameters
     parser.add_argument('--save_name', default=None, type=str)
-    parser.add_argument('--save_freq', default=10, type=int)
+    parser.add_argument('--save_freq', default=100, type=int)
     ### Distributed Data Parallel addition
 
     parser.add_argument('--init_method', default=None, type=str)
