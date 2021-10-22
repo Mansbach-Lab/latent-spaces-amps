@@ -166,7 +166,7 @@ class VAEShell():
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
         else:
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
-
+            
     def train(self, train_mols, val_mols, train_props=None, val_props=None,
               epochs=200, save=True, save_freq=None, log=True, log_dir='trials'):
         """
@@ -256,8 +256,8 @@ class VAEShell():
                 local_rank = int(os.environ.get("SLURM_LOCALID")) 
                 rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
             
-            if rank==0 or rank==1 or rank==2 or rank==3:
-                dist.barrier()
+                if rank==0 or rank==1 or rank==2 or rank==3:
+                    dist.barrier()
         
             epoch_start_time= perf_counter()
             ### Train Loop
@@ -265,6 +265,8 @@ class VAEShell():
             losses = []
             beta = kl_annealer(epoch)
             for j, data in enumerate(train_iter):
+                if j==1 or j==0:
+                    print(self.optimizer.state_dict)
                 avg_losses = []
                 avg_bce_losses = []
                 avg_bcemask_losses = []
@@ -283,7 +285,7 @@ class VAEShell():
 
 
                     src = Variable(mols_data).long()
-                    tgt = Variable(mols_data[:,:-1]).long()
+                    tgt = Variable(mols_data[:,:-1]).long()                 
                     true_prop = Variable(props_data)
                     src_mask = (src != self.pad_idx).unsqueeze(-2) #true or false according to sequence length
                     tgt_mask = make_std_mask(tgt, self.pad_idx) #cascading true false masking [true false...] [true true false...] ...
@@ -564,6 +566,7 @@ class VAEShell():
         if src_mask is None and self.model_type == 'transformer':
             mask_lens = self.model.encoder.predict_mask_length(mem)
             src_mask = torch.zeros((mem.shape[0], 1, self.src_len+1))
+            print(src_mask.shape)
             for i in range(mask_lens.shape[0]):
                 mask_len = mask_lens[i].item()
                 src_mask[i,:,:mask_len] = torch.ones((1, 1, mask_len))
@@ -616,7 +619,7 @@ class VAEShell():
             mems (np.array): Array of model memory vectors
         """
         data = vae_data_gen(data,max_len=self.src_len,name=self.name, char_dict=self.params['CHAR_DICT'])
-
+        print(data.shape)
         data_iter = torch.utils.data.DataLoader(data,
                                                 batch_size=self.params['BATCH_SIZE'],
                                                 shuffle=False, num_workers=0,
@@ -634,12 +637,14 @@ class VAEShell():
                 log_file.close()
             for i in range(self.params['BATCH_CHUNKS']):
                 batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
+                mols_data = batch_data[:,:-1]
                 if self.use_gpu:
                     batch_data = batch_data.cuda()
 
-                src = Variable(batch_data).long()
+                src = Variable(mols_data).long()
+                print("src",src.shape)
                 src_mask = (src != self.pad_idx).unsqueeze(-2)
-
+                print("src_mask",src_mask.shape)
                 ### Run through encoder to get memory
                 if self.model_type == 'transformer':
                     _, mem, _, _ = self.model.encode(src, src_mask)
@@ -856,7 +861,7 @@ class TransVAE(VAEShell):
                 
                 #self.model.cuda()
 
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
+                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=False)
             else: self.build_model()
         else:
             self.load(load_fn)

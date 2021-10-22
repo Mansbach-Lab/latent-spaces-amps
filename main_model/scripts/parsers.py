@@ -68,8 +68,8 @@ def train_parser():
     ### Hyperparameters
     parser.add_argument('--batch_size', default=500, type=int)
     parser.add_argument('--batch_chunks', default=1, type=int)
-    parser.add_argument('--beta', default=0.05, type=float)
-    parser.add_argument('--beta_init', default=1e-8, type=float)
+    parser.add_argument('--beta', default=0.024975, type=float) #OG =0.05
+    parser.add_argument('--beta_init', default=0.0249, type=float) #OG =1e-8
     parser.add_argument('--anneal_start', default=0, type=int)
     parser.add_argument('--adam_lr', default=3e-4, type=float)
     parser.add_argument('--lr_scale', default=1, type=float)

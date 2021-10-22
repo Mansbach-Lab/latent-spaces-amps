@@ -25,7 +25,7 @@ def vae_data_gen(data, max_len=126, name=None, props=None, char_dict=None):
     if props is None:
         props = np.zeros(seq_list.shape)
     del data
-    if name.split('_')[1]=='peptide':  #separate sequence into list of chars e.g. 'CC1c2'-->['C''C''1''c''2']
+    if not name == None and name.split('_')[1]=='peptide':  #separate sequence into list of chars e.g. 'CC1c2'-->['C''C''1''c''2']
         seq_list = [peptide_tokenizer(x) for x in seq_list]     #use peptide_tokenizer                  
     else: 
         seq_list = [tokenizer(x) for x in seq_list] 
