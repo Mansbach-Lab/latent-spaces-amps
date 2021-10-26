@@ -83,13 +83,15 @@ class KLAnnealer:
         self.kl = (self.kl_high - self.kl_low) / (self.n_epochs - self.start_epoch)
 
     def __call__(self, epoch):
-        k = (epoch - self.start_epoch) if epoch >= self.start_epoch else 0
-        beta = self.kl_low + k * self.kl
-        if beta > self.kl_high:
+        if self.start_epoch == 0:
+            k = (epoch - self.start_epoch) if epoch >= self.start_epoch else 0
+            beta = self.kl_low + k * self.kl
+            if beta > self.kl_high:
+                beta = self.kl_high  
+            else:
+                pass
+        else: #when checkpointing just set the beta to the max value from previous training
             beta = self.kl_high
-        else:
-            pass
-        beta = 0.024975
         return beta
 
 

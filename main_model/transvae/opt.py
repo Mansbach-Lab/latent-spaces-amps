@@ -50,7 +50,6 @@ class AdamOpt:
 
     def load_state_dict(self, state_dict):
         self.optimizer.load_state_dict(state_dict)
-        #self.state_dict = state_dict
 
 def get_std_opt(model):
     return NoamOpt(model.src_embed[0].d_model, 2, 4000,

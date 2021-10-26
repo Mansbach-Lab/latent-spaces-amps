@@ -12,10 +12,7 @@ from torch.autograd import Variable
 from transvae.tvae_util import *
 from transvae.opt import NoamOpt
 from transvae.data import vae_data_gen, make_std_mask
-from transvae.loss import vae_loss, trans_vae_loss, aae_loss, wae_loss
-
-import torch.distributed as dist
-import torch.utils.data.distributed
+from transvae.loss import vae_loss, trans_vae_loss
 
 
 ####### MODEL SHELL ##########
@@ -31,7 +28,7 @@ class VAEShell():
         if 'BATCH_SIZE' not in self.params.keys():
             self.params['BATCH_SIZE'] = 500
         if 'BATCH_CHUNKS' not in self.params.keys():
-            self.params['BATCH_CHUNKS'] = 1
+            self.params['BATCH_CHUNKS'] = 5
         if 'BETA_INIT' not in self.params.keys():
             self.params['BETA_INIT'] = 1e-8
         if 'BETA' not in self.params.keys():
@@ -51,19 +48,6 @@ class VAEShell():
                 self.params['CHAR_WEIGHTS'] = torch.tensor(self.params['CHAR_WEIGHTS'], dtype=torch.float)
             else:
                 self.params['CHAR_WEIGHTS'] = torch.ones(self.vocab_size, dtype=torch.float)
-        ### DDP INITIALIZATION
-        if 'INIT_METHOD' not in self.params.keys():
-            self.params['INIT_METHOD'] = 'tcp://127.0.0.1:3456'
-        if 'DIST_BACKEND' not in self.params.keys():
-            self.params['DIST_BACKEND'] = 'nccl'
-        if 'DISTRIBUTED' not in self.params.keys():
-            self.params['DISTRIBUTED'] = True
-        if 'WORLD_SIZE' not in self.params.keys():
-            self.params['WORLD_SIZE'] = 1
-        if 'NUM_WORKERS' not in self.params.keys():
-            self.params['NUM_WORKERS'] = 0
-        if 'DDP' not in self.params.keys():
-            self.params['DDP'] = False
         self.loss_func = vae_loss
         self.data_gen = vae_data_gen
 
@@ -82,7 +66,7 @@ class VAEShell():
                               'params': self.params}
         self.loaded_from = None
 
-    def save(self, state, fn, path='checkpointz', use_name=True):
+    def save(self, state, fn, path='checkpoints', use_name=True):
         """
         Saves current model state to .ckpt file
 
@@ -105,27 +89,16 @@ class VAEShell():
             save_path = os.path.join(path, fn)
         else:
             save_path = fn
-        if self.params['DDP']:
-            torch.save(state, save_path)
-            os.system("cp {} ~/scratch".format(save_path))
-        else:
-            torch.save(state, save_path)
-        
-        
-        
-    def load(self, checkpoint_path, rank=0):
+        torch.save(state, save_path)
+
+    def load(self, checkpoint_path):
         """
         Loads a saved model state
 
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
-        if self.params['DDP']:
-            map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
-            loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
-            
-        else:
-            loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.loaded_from = checkpoint_path
         for k in self.current_state.keys():
             try:
@@ -147,28 +120,11 @@ class VAEShell():
         self.vocab_size = len(self.params['CHAR_DICT'].keys())
         self.pad_idx = self.params['CHAR_DICT']['_']
         self.build_model()
-        
-        # This is temporararily necessary because of saving not being properly done on Compute Canada model
-        state_dict = self.current_state['model_state_dict']
-        # create new OrderedDict that does not contain `module.`
-        if 'module' in list(state_dict)[0]:
-            from collections import OrderedDict
-            new_state_dict = OrderedDict()
-            for k, v in state_dict.items():
-                name = k[7:] # remove `module.`
-                new_state_dict[name] = v
-            # load params
-            self.model.load_state_dict(new_state_dict)
-        else:
-            self.model.load_state_dict(self.current_state['model_state_dict'])        
-        
-        if self.model_type == 'aae': #load the aae generator and discriminator optimizers separately
-            self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
-        else:
-            self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
-            
+        self.model.load_state_dict(self.current_state['model_state_dict'])
+        self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
+
     def train(self, train_mols, val_mols, train_props=None, val_props=None,
-              epochs=200, save=True, save_freq=None, log=True, log_dir='trials'):
+              epochs=100, save=True, save_freq=None, log=True, log_dir='trials'):
         """
         Train model and validate
 
@@ -187,31 +143,15 @@ class VAEShell():
             log (bool): If true, writes training metrics to log file
             log_dir (str): Directory to store log files
         """
-  
         ### Prepare data iterators
+        train_data = self.data_gen(train_mols, train_props, char_dict=self.params['CHAR_DICT'])
+        val_data = self.data_gen(val_mols, val_props, char_dict=self.params['CHAR_DICT'])
 
-        train_data = self.data_gen(train_mols,self.src_len, self.name, train_props, char_dict=self.params['CHAR_DICT'])
-        val_data = self.data_gen(val_mols, self.src_len, self.name, val_props, char_dict=self.params['CHAR_DICT'])
-        #SPECIAL DATA INPUT FOR DDP
-        if self.params['DDP']:
-            train_sampler = torch.utils.data.distributed.DistributedSampler(train_data, shuffle=True)
-            val_sampler = torch.utils.data.distributed.DistributedSampler(val_data, shuffle=True)
-            
-            train_iter = torch.utils.data.DataLoader(train_data,
-                                                batch_size=self.params['BATCH_SIZE'],
-                                                num_workers=0,
-                                                pin_memory=False, drop_last=True, sampler=train_sampler)
-            val_iter = torch.utils.data.DataLoader(val_data,
-                                                batch_size=self.params['BATCH_SIZE'],
-                                                num_workers=0,
-                                                pin_memory=False, drop_last=True, sampler=val_sampler)
-
-        else:
-            train_iter = torch.utils.data.DataLoader(train_data,
+        train_iter = torch.utils.data.DataLoader(train_data,
                                                  batch_size=self.params['BATCH_SIZE'],
                                                  shuffle=True, num_workers=0,
                                                  pin_memory=False, drop_last=True)
-            val_iter = torch.utils.data.DataLoader(val_data,
+        val_iter = torch.utils.data.DataLoader(val_data,
                                                batch_size=self.params['BATCH_SIZE'],
                                                shuffle=True, num_workers=0,
                                                pin_memory=False, drop_last=True)
@@ -239,27 +179,15 @@ class VAEShell():
                 already_wrote = False
             log_file = open(log_fn, 'a')
             if not already_wrote:
-                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,'\
-                               'kld_loss,prop_mse_loss,disc_loss,mmd_loss,run_time\n')
+                log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,kld_loss,prop_mse_loss,run_time\n')
             log_file.close()
 
         ### Initialize Annealer
         kl_annealer = KLAnnealer(self.params['BETA_INIT'], self.params['BETA'],
                                  epochs, self.params['ANNEAL_START'])
-        ####################################################################################################
 
         ### Epoch loop
         for epoch in range(epochs):
-        #this first set of lines synchronizes the GPUs for checkpoint loading using DDP
-            if self.params['DDP']:
-                ngpus_per_node = torch.cuda.device_count()
-                local_rank = int(os.environ.get("SLURM_LOCALID")) 
-                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-            
-                if rank==0 or rank==1 or rank==2 or rank==3:
-                    dist.barrier()
-        
-            epoch_start_time= perf_counter()
             ### Train Loop
             self.model.train()
             losses = []
@@ -270,8 +198,6 @@ class VAEShell():
                 avg_bcemask_losses = []
                 avg_kld_losses = []
                 avg_prop_mse_losses = []
-                avg_disc_losses = []
-                avg_mmd_losses = []
                 start_run_time = perf_counter()
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
@@ -283,11 +209,11 @@ class VAEShell():
 
 
                     src = Variable(mols_data).long()
-                    tgt = Variable(mols_data[:,:-1]).long()                 
+                    tgt = Variable(mols_data[:,:-1]).long()
                     true_prop = Variable(props_data)
-                    src_mask = (src != self.pad_idx).unsqueeze(-2) #true or false according to sequence length
-                    tgt_mask = make_std_mask(tgt, self.pad_idx) #cascading true false masking [true false...] [true true false...] ...
-                        
+                    src_mask = (src != self.pad_idx).unsqueeze(-2)
+                    tgt_mask = make_std_mask(tgt, self.pad_idx)
+
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)
@@ -297,40 +223,18 @@ class VAEShell():
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
-                    if self.model_type == 'aae': #the aae loss takes the discriminator output, latent space and optimizer as input
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,beta)
-                        avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
-                        
-                    if self.model_type == 'wae': 
-                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, mmd_loss  = wae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  latent_mem,
-                                                                  beta)
-                        avg_mmd_losses.append(mmd_loss.item())
-                        
-                    if self.model_type == 'rnn' or self.model_type =='rnnattn':
+                    else:
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'], self,
+                                                                  self.params['CHAR_WEIGHTS'],
                                                                   beta)
-                           
                     avg_losses.append(loss.item())
                     avg_bce_losses.append(bce.item())
                     avg_kld_losses.append(kld.item())
                     avg_prop_mse_losses.append(prop_mse.item())
-                    if not self.model_type == 'aae': #the aae backpropagates in the loss function
-                        loss.backward()
-                
-                if not self.model_type == 'aae':
-                    self.optimizer.step()
-                    disc_loss = 0 
+                    loss.backward()
+                self.optimizer.step()
                 self.model.zero_grad()
                 stop_run_time = perf_counter()
                 run_time = round(stop_run_time - start_run_time, 5)
@@ -340,29 +244,19 @@ class VAEShell():
                     avg_bcemask = 0
                 else:
                     avg_bcemask = np.mean(avg_bcemask_losses)
-                if len(avg_disc_losses) == 0:
-                    avg_disc = 0
-                else:
-                    avg_disc = np.mean(avg_disc_losses)
-                if len(avg_mmd_losses) == 0:
-                    avg_mmd = 0
-                else:
-                    avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
 
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                          j, 'train',
                                                                          avg_loss,
                                                                          avg_bce,
                                                                          avg_bcemask,
                                                                          avg_kld,
                                                                          avg_prop_mse,
-                                                                         avg_disc,
-                                                                         avg_mmd,
                                                                          run_time))
                     log_file.close()
             train_loss = np.mean(losses)
@@ -376,8 +270,6 @@ class VAEShell():
                 avg_bcemask_losses = []
                 avg_kld_losses = []
                 avg_prop_mse_losses = []
-                avg_disc_losses = []
-                avg_mmd_losses = []
                 start_run_time = perf_counter()
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
@@ -393,8 +285,7 @@ class VAEShell():
                     src_mask = (src != self.pad_idx).unsqueeze(-2)
                     tgt_mask = make_std_mask(tgt, self.pad_idx)
                     scores = Variable(data[:,-1])
-                    
-                  
+
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)
@@ -404,23 +295,7 @@ class VAEShell():
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
-                    if self.model_type == 'aae':
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,beta)
-                        avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
-                        
-                    if self.model_type == 'wae': 
-                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, mmd_loss = wae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  latent_mem,
-                                                                  beta)
-                        avg_mmd_losses.append(mmd_loss.item())
-                    if self.model_type == 'rnn' or self.model_type =='rnnattn':
+                    else:
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
                         loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
@@ -438,83 +313,43 @@ class VAEShell():
                     avg_bcemask = 0
                 else:
                     avg_bcemask = np.mean(avg_bcemask_losses)
-                if len(avg_disc_losses) == 0:
-                    avg_disc = 0
-                else:
-                    avg_disc = np.mean(avg_disc_losses)
-                if len(avg_mmd_losses) == 0:
-                    avg_mmd = 0
-                else:
-                    avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
                 avg_prop_mse = np.mean(avg_prop_mse_losses)
                 losses.append(avg_loss)
-                
-               
+
                 if log:
                     log_file = open(log_fn, 'a')
-                    log_file.write('{},{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
+                    log_file.write('{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
                                                                 j, 'test',
                                                                 avg_loss,
                                                                 avg_bce,
                                                                 avg_bcemask,
                                                                 avg_kld,
                                                                 avg_prop_mse,
-                                                                avg_disc,
-                                                                avg_mmd,
                                                                 run_time))
                     log_file.close()
 
             self.n_epochs += 1
             val_loss = np.mean(losses)
-            epoch_end_time = perf_counter()
-            epoch_time = round(epoch_start_time - epoch_end_time, 5)
-            if self.params['DDP']:
-                os.system("echo Epoch - {} Train - {} Val - {} KLBeta - {} Epoch time - {}".format(self.n_epochs, train_loss, val_loss, beta, epoch_time))
-            else:
-                print('Epoch - {} Train - {} Val - {} KLBeta - {} Epoch time - {}'.format(self.n_epochs, train_loss, val_loss, beta, epoch_time))
+            print('Epoch - {} Train - {} Val - {} KLBeta - {}'.format(self.n_epochs, train_loss, val_loss, beta))
 
             ### Update current state and save model
             self.current_state['epoch'] = self.n_epochs
             self.current_state['model_state_dict'] = self.model.state_dict()
-            if self.model_type == 'aae': #The aae uses two optimizers we store both optimizer states in a tuple, see load for loading
-                self.current_state['optimizer_state_dict'] = (self.optimizer.state_dict_g,self.optimizer.state_dict_d)
-            else:
-                self.current_state['optimizer_state_dict'] = self.optimizer.state_dict
-            #for DDP saving and loading below    
-            #if self.params['DDP']:
-            #    ngpus_per_node = torch.cuda.device_count()
-            #    local_rank = int(os.environ.get("SLURM_LOCALID")) 
-            #    rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-            #
-            #if rank==0 or rank==1 or rank==2 or rank==3:
-            #    os.system("!!blocking rank:{}!!".format(rank))
-            #    dist.barrier()
-            
-            #if val_loss < self.best_loss:
-            #    self.best_loss = val_loss
-            #    self.current_state['best_loss'] = self.best_loss
-            #    if save:
-            #        if self.params['DDP']:
-            #            if rank ==0:
-            #                self.save(self.current_state, 'best')
-            #            torch.cuda.synchronize()
-            #            self.load("checkpointz//best_"+self.name+".ckpt", rank)
-            #            
-            #        else: self.save(self.current_state, 'best')
-                        
+            self.current_state['optimizer_state_dict'] = self.optimizer.state_dict
+
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
+                self.current_state['best_loss'] = self.best_loss
+                if save:
+                    self.save(self.current_state, 'best')
+
             if (self.n_epochs) % save_freq == 0:
                 epoch_str = str(self.n_epochs)
                 while len(epoch_str) < 3:
                     epoch_str = '0' + epoch_str
-                if save:                
-                    if self.params['DDP']:
-                        if rank ==0:
-                            self.save(self.current_state, epoch_str)
-#                             self.save(self.current_state, epoch_str)
-#                         torch.cuda.synchronize(0)
-#                         self.load("checkpointz//"+epoch_str+"_"+self.name+".ckpt", rank)
-                    else: self.save(self.current_state, epoch_str)
+                if save:
+                    self.save(self.current_state, epoch_str)
 
     ### Sampling and Decoding Functions
     def sample_from_memory(self, size, mode='rand', sample_dims=None, k=5):
@@ -545,7 +380,7 @@ class VAEShell():
                     z[:,d] = torch.randn(size)
         return z
 
-    def greedy_decode(self, mem, src_mask=None):
+    def greedy_decode(self, mem, src_mask=None, condition=[]):
         """
         Greedy decode from model memory
 
@@ -559,8 +394,12 @@ class VAEShell():
         start_symbol = self.params['CHAR_DICT']['<start>']
         max_len = self.tgt_len
         decoded = torch.ones(mem.shape[0],1).fill_(start_symbol).long()
+        for tok in condition:
+            condition_symbol = self.params['CHAR_DICT'][tok]
+            condition_vec = torch.ones(mem.shape[0],1).fill_(condition_symbol).long()
+            decoded = torch.cat([decoded, condition_vec], dim=1)
         tgt = torch.ones(mem.shape[0],max_len+1).fill_(start_symbol).long()
-        
+        tgt[:,:len(condition)+1] = decoded
         if src_mask is None and self.model_type == 'transformer':
             mask_lens = self.model.encoder.predict_mask_length(mem)
             src_mask = torch.zeros((mem.shape[0], 1, self.src_len+1))
@@ -576,7 +415,7 @@ class VAEShell():
             tgt = tgt.cuda()
 
         self.model.eval()
-        for i in range(max_len):
+        for i in range(len(condition), max_len):
             if self.model_type == 'transformer':
                 decode_mask = Variable(subsequent_mask(decoded.size(1)).long())
                 if self.use_gpu:
@@ -615,7 +454,8 @@ class VAEShell():
                                    token ids
             mems (np.array): Array of model memory vectors
         """
-        data = vae_data_gen(data,max_len=self.src_len,name=self.name, char_dict=self.params['CHAR_DICT'])
+        data = vae_data_gen(data, props=None, char_dict=self.params['CHAR_DICT'])
+
         data_iter = torch.utils.data.DataLoader(data,
                                                 batch_size=self.params['BATCH_SIZE'],
                                                 shuffle=False, num_workers=0,
@@ -634,18 +474,17 @@ class VAEShell():
             for i in range(self.params['BATCH_CHUNKS']):
                 batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                 mols_data = batch_data[:,:-1]
+                props_data = batch_data[:,-1]
                 if self.use_gpu:
-                    batch_data = batch_data.cuda()
+                    mols_data = mols_data.cuda()
+                    props_data = props_data.cuda()
 
                 src = Variable(mols_data).long()
                 src_mask = (src != self.pad_idx).unsqueeze(-2)
+
                 ### Run through encoder to get memory
                 if self.model_type == 'transformer':
                     _, mem, _, _ = self.model.encode(src, src_mask)
-                elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
-                     mem, _, _ = self.model.encode(src)
-                elif self.model_type == 'wae':
-                     mem, _, _ = self.model.encode(src)
                 else:
                     _, mem, _ = self.model.encode(src)
                 start = j*self.batch_size+i*self.chunk_size
@@ -670,7 +509,8 @@ class VAEShell():
             return decoded_smiles
 
     def sample(self, n, method='greedy', sample_mode='rand',
-                        sample_dims=None, k=None, return_str=True):
+                        sample_dims=None, k=None, return_str=True,
+                        condition=[]):
         """
         Method for sampling from memory and decoding back into SMILES strings
 
@@ -696,7 +536,7 @@ class VAEShell():
 
         ### Decode logic
         if method == 'greedy':
-            decoded = self.greedy_decode(mem)
+            decoded = self.greedy_decode(mem, condition=condition)
         else:
             decoded = None
 
@@ -719,7 +559,7 @@ class VAEShell():
             mus(np.array): Mean memory array (prior to reparameterization)
             logvars(np.array): Log variance array (prior to reparameterization)
         """
-        data = vae_data_gen(data, max_len=self.src_len,name=self.name,props=None, char_dict=self.params['CHAR_DICT'])
+        data = vae_data_gen(data, props=None, char_dict=self.params['CHAR_DICT'])
 
         data_iter = torch.utils.data.DataLoader(data,
                                                 batch_size=self.params['BATCH_SIZE'],
@@ -824,39 +664,7 @@ class TransVAE(VAEShell):
 
         ### Build model architecture
         if load_fn is None:
-            if self.params['DDP']:
-                ### prepare distributed data parallel (added by Samuel Renaud)
-                os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
-                ngpus_per_node = torch.cuda.device_count()
-                
-                """ This next line is the key to getting DistributedDataParallel working on SLURM:
-                    SLURM_NODEID is 0 or 1 in this example, SLURM_LOCALID is the id of the 
-                    current process inside a node and is also 0 or 1 in this example."""
-                local_rank = int(os.environ.get("SLURM_LOCALID")) 
-                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-
-                """ This next block parses CUDA_VISIBLE_DEVICES to find out which GPUs have been allocated to the job, then sets torch.device to the GPU corresponding       to the local rank (local rank 0 gets the first GPU, local rank 1 gets the second GPU etc) """
-                available_gpus = list(os.environ.get('CUDA_VISIBLE_DEVICES').replace(',',""))
-                current_device = int(available_gpus[local_rank])
-                torch.cuda.set_device(current_device)
-                
-                self.build_model()
-
-                """ this block initializes a process group and initiate communications
-                        between all processes running on all nodes """
-                os.system("echo From Rank: {}, ==> Initializing Process Group...".format(rank))         
-                #init the process group
-                dist.init_process_group(backend=self.params['DIST_BACKEND'], init_method=self.params['INIT_METHOD'],
-                                        world_size=self.params['WORLD_SIZE'], rank=rank)
-                os.system("echo process group ready!")
-                os.system('echo From Rank: {}, ==> Making model..'.format(rank))
-                os.system("echo final check; ngpus_per_node={},local_rank={},rank={},available_gpus={},current_device={}"
-                          .format(ngpus_per_node,local_rank,rank,available_gpus,current_device))
-                
-                #self.model.cuda()
-
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=False)
-            else: self.build_model()
+            self.build_model()
         else:
             self.load(load_fn)
 
@@ -874,8 +682,7 @@ class TransVAE(VAEShell):
                                           self.params['EPS_SCALE'])
         decoder = VAEDecoder(EncoderLayer(self.params['d_model'], self.src_len, c(attn), c(ff), self.params['dropout']),
                              DecoderLayer(self.params['d_model'], self.tgt_len, c(attn), c(attn), c(ff), self.params['dropout']),
-                                          self.params['N'], self.params['d_latent'], self.params['bypass_bottleneck'], 
-                                          encoder.conv_bottleneck.conv_list)
+                                          self.params['N'], self.params['d_latent'], self.params['bypass_bottleneck'])
         src_embed = nn.Sequential(Embeddings(self.params['d_model'], self.vocab_size), c(position))
         tgt_embed = nn.Sequential(Embeddings(self.params['d_model'], self.vocab_size), c(position))
         generator = Generator(self.params['d_model'], self.vocab_size)
@@ -911,7 +718,7 @@ class EncoderDecoder(nn.Module):
         self.property_predictor = property_predictor
 
     def forward(self, src, tgt, src_mask, tgt_mask):
-        "Take in and process masked src and tgt sequences (added output shape from conv for decoder ease)"
+        "Take in and process masked src and tgt sequences"
         mem, mu, logvar, pred_len = self.encode(src, src_mask)
         x = self.decode(mem, src_mask, tgt, tgt_mask)
         x = self.generator(x)
@@ -944,13 +751,12 @@ class VAEEncoder(nn.Module):
     def __init__(self, layer, N, d_latent, bypass_bottleneck, eps_scale):
         super().__init__()
         self.layers = clones(layer, N)
-        self.conv_bottleneck = ConvBottleneck(layer.size, layer.src_len)
-        self.flat_conv_out = self.conv_bottleneck.conv_list[-1] * self.conv_bottleneck.out_channels
-        self.z_means, self.z_var = nn.Linear(self.flat_conv_out, d_latent), nn.Linear(self.flat_conv_out, d_latent)
+        self.conv_bottleneck = ConvBottleneck(layer.size)
+        self.z_means, self.z_var = nn.Linear(576, d_latent), nn.Linear(576, d_latent)
         self.norm = LayerNorm(layer.size)
         self.predict_len1 = nn.Linear(d_latent, d_latent*2)
         self.predict_len2 = nn.Linear(d_latent*2, d_latent)
-        self.d_latent = d_latent
+
         self.bypass_bottleneck = bypass_bottleneck
         self.eps_scale = eps_scale
 
@@ -1027,7 +833,7 @@ class EncoderLayer(nn.Module):
 
 class VAEDecoder(nn.Module):
     "Base transformer decoder architecture"
-    def __init__(self, encoder_layers, decoder_layers, N, d_latent, bypass_bottleneck, conv_list):
+    def __init__(self, encoder_layers, decoder_layers, N, d_latent, bypass_bottleneck):
         super().__init__()
         self.final_encodes = clones(encoder_layers, 1)
         self.layers = clones(decoder_layers, N)
@@ -1035,16 +841,16 @@ class VAEDecoder(nn.Module):
         self.bypass_bottleneck = bypass_bottleneck
         self.size = decoder_layers.size
         self.tgt_len = decoder_layers.tgt_len
-        self.conv_out = conv_list[-1] #take the last outputs shape from the convlution
+
         # Reshaping memory with deconvolution
-        self.deconv_bottleneck = DeconvBottleneck(decoder_layers.size, encoder_layers.src_len, conv_list)
-        self.linear = nn.Linear(d_latent, 64*self.conv_out)
+        self.linear = nn.Linear(d_latent, 576)
+        self.deconv_bottleneck = DeconvBottleneck(decoder_layers.size)
 
     def forward(self, x, mem, src_mask, tgt_mask):
         ### Deconvolutional bottleneck (up-sampling)
         if not self.bypass_bottleneck:
             mem = F.relu(self.linear(mem))
-            mem = mem.view(-1, 64, self.conv_out)
+            mem = mem.view(-1, 64, 9)
             mem = self.deconv_bottleneck(mem)
             mem = mem.permute(0, 2, 1)
         ### Final self-attention layer
@@ -1061,7 +867,7 @@ class VAEDecoder(nn.Module):
         "Forward pass that saves attention weights"
         if not self.bypass_bottleneck:
             mem = F.relu(self.linear(mem))
-            mem = mem.view(-1, 64, self.conv_out)
+            mem = mem.view(-1, 64, 9)
             mem = self.deconv_bottleneck(mem)
             mem = mem.permute(0, 2, 1)
         for final_encode in self.final_encodes:
@@ -1152,16 +958,12 @@ class ConvBottleneck(nn.Module):
     """
     Set of convolutional layers to reduce memory matrix to single
     latent vector
-    NEED TO MAKE THIS GENERALIZEABLE IT IS HARD SET TO 64*9 = 576 from an input vector of length 128 
     """
-    def __init__(self, size, src_len):
+    def __init__(self, size):
         super().__init__()
         conv_layers = []
-        self.conv_list = [] # this will allow a flexible model input by changing the decoder shape to match each level of convolution
         in_d = size
         first = True
-        input_shape = src_len
-        self.out_channels = 64
         for i in range(3):
             out_d = int((in_d - 64) // 2 + 64)
             if first:
@@ -1170,15 +972,9 @@ class ConvBottleneck(nn.Module):
             else:
                 kernel_size = 8
             if i == 2:
-                out_d = self.out_channels
-            conv_layers.append(nn.Sequential(nn.Conv1d(in_d, out_d, kernel_size), nn.MaxPool1d(kernel_size=2)))
+                out_d = 64
+            conv_layers.append(nn.Sequential(nn.Conv1d(in_d, out_d, kernel_size), nn.MaxPool1d(2)))
             in_d = out_d
-            #conv_out_shape [(W−K+2P)/S]+1 ;W:input, K:kernel_size, P:padding, S:stride default=1
-            #maxpool output shape [(W+2p-D*(K-1)-1)/S]+1  W:input, D:dilation, K:kernel_size, P:padding, S:stride default=kernel_size
-            conv_out_shape = ((input_shape-kernel_size)//1)+1 
-            maxpool_out_shape = ((conv_out_shape-(2-1)-1)//2)+1
-            input_shape = maxpool_out_shape
-            self.conv_list.append(input_shape)#save the output shape
         self.conv_layers = ListModule(*conv_layers)
 
     def forward(self, x):
@@ -1191,23 +987,19 @@ class DeconvBottleneck(nn.Module):
     Set of deconvolutional layers to reshape latent vector
     back into memory matrix
     """
-    def __init__(self, size, src_len, conv_list):
+    def __init__(self, size):
         super().__init__()
         deconv_layers = []
         in_d = 64
-        input_shape = src_len+1
-        conv_list.insert(0,input_shape) #add the original source length to the conv shape list
         for i in range(3):
-            #formula to find appropriate kernel size for each layer:(L_out-1)-2(L_in-1)+1=K ,K:kernel_size,L_out:new_shape,L_in:old_shape
-            L_in = conv_list[3-i]
-            L_out = conv_list[3-(i+1)]
             out_d = (size - in_d) // 4 + in_d
-            stride = 2
-            kernel_size = (L_out-1)-2*(L_in-1)+1
+            stride = 4 - i
+            kernel_size = 11
             if i == 2:
                 out_d = size
+                stride = 1
             deconv_layers.append(nn.Sequential(nn.ConvTranspose1d(in_d, out_d, kernel_size,
-                                                                  stride=stride, padding=0)))
+                                                                  stride=stride, padding=2)))
             in_d = out_d
         self.deconv_layers = ListModule(*deconv_layers)
 
@@ -1241,14 +1033,14 @@ class PropertyPredictor(nn.Module):
 ############## Embedding Layers ###################
 
 class Embeddings(nn.Module):
-    "Transforms input token id tensors to size d_model embeddings. Importantly this embedding is learnable! Weights change with backprop."
+    "Transforms input token id tensors to size d_model embeddings"
     def __init__(self, d_model, vocab):
         super().__init__()
         self.lut = nn.Embedding(vocab, d_model)
         self.d_model = d_model
 
     def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model) #apparently square root might be for the transformer model to keep num's low
+        return self.lut(x) * math.sqrt(self.d_model)
 
 class PositionalEncoding(nn.Module):
     "Static sinusoidal positional encoding layer"

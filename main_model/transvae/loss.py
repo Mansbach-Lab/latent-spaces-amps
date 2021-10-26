@@ -7,6 +7,7 @@ from torch.autograd import Variable
 
 def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
     "Binary Cross Entropy Loss + Kiebler-Lublach Divergence"
+    print(beta)
     x = x.long()[:,1:] - 1 #drop the start token
     x = x.contiguous().view(-1) #squeeze into 1 tensor size num_batches*max_seq_len
     x_out = x_out.contiguous().view(-1, x_out.size(2)) # squeeze first and second dims matching above, keeping the 25 class dims.
