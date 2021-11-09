@@ -1,5 +1,5 @@
 import argparse
-from transvae.trans_models import TransVAE
+from transvae.transformer_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 
 '''
@@ -8,6 +8,7 @@ need to add sample parser and attn_parser
 '''
 from transvae.aae_models import AAE
 from transvae.wae_models import WAE
+
 
 
 
@@ -134,9 +135,9 @@ def attn_parser():
     parser.add_argument('--model_ckpt', required=True, type=str)
     parser.add_argument('--mols', required=True, type=str)
     ### Sampling Parameters
-    parser.add_argument('--n_samples', default=5000, type=int)
-    parser.add_argument('--batch_size', default=500, type=int)
-    parser.add_argument('--batch_chunks', default=5, type=int)
+    parser.add_argument('--n_samples', default=50, type=int)
+    parser.add_argument('--batch_size', default=50, type=int)
+    parser.add_argument('--batch_chunks', default=1, type=int)
     parser.add_argument('--shuffle', default=False, action='store_true')
     ### Save Parameters
     parser.add_argument('--save_path', default=None, type=str)

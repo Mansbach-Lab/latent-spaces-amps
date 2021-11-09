@@ -8,7 +8,8 @@ import pandas as pd
 import torch
 from torch.autograd import Variable
 
-from transvae.trans_models import TransVAE
+from transvae.trans_models import *
+from transvae.transformer_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 
 from transvae.data import vae_data_gen, make_std_mask
@@ -31,7 +32,7 @@ def calc_attention(args):
         data = data[:args.n_samples,:]
 
     ### Load data and prepare for iteration
-    data = vae_data_gen(data, props=None, char_dict=vae.params['CHAR_DICT'])
+    data = vae_data_gen(data, props=None, name=vae.name,char_dict=vae.params['CHAR_DICT'])
     data_iter = torch.utils.data.DataLoader(data,
                                             batch_size=args.batch_size,
                                             shuffle=False, num_workers=0,

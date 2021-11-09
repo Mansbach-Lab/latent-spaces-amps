@@ -37,9 +37,9 @@ def plot_test_train_curves(paths, target_path=None, loss_type='tot_loss', data_t
         except KeyError:
             data = df[df.data_type == data_type].groupby('epoch').mean()['bce_loss']
         if loss_type == 'kld_loss':
-            klannealer = KLAnnealer(1e-8, 0.05, 60, 0)
+            klannealer = KLAnnealer(1e-8, 0.05, 1000, 0)
             klanneal = []
-            for j in range(60):
+            for j in range(1000):
                 klanneal.append(klannealer(j))
             data /= klanneal
         plt.plot(data, c=colors[i], lw=2.5, label=labels[i], alpha=0.95)
@@ -74,7 +74,7 @@ def plot_loss_by_type(path, colors=None):
     plt.figure(figsize=(10,8))
     ax = plt.subplot(111)
 
-    loss_types = ['tot_loss', 'bce_loss', 'kld_loss', 'pred_loss']
+    loss_types = ['tot_loss', 'recon_loss', 'kld_loss']
     for i, loss_type in enumerate(loss_types):
         train_data = df[df.data_type == 'train'].groupby('epoch').mean()[loss_type]
         test_data = df[df.data_type == 'test'].groupby('epoch').mean()[loss_type]
@@ -83,7 +83,7 @@ def plot_loss_by_type(path, colors=None):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.ylabel('Loss', rotation='horizontal')
     plt.xlabel('epoch')
     plt.title(path.split('/')[-1].split('log_GRUGRU_')[-1].split('.')[0])

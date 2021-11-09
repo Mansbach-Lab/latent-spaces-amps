@@ -7,7 +7,8 @@ import pandas as pd
 
 import torch
 
-from transvae.trans_models import TransVAE
+from transvae import *
+from transvae.transformer_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 from scripts.parsers import model_init, train_parser
 

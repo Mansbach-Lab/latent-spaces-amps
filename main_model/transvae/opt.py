@@ -36,7 +36,7 @@ class NoamOpt:
         return self.factor * (self.model_size ** (-0.5) * min(step ** (-0.5), step * self.warmup ** (-1.5)))
 
     def load_state_dict(self, state_dict):
-        self.state_dict = state_dict
+        self.optimizer.load_state_dict(state_dict)
 
 class AdamOpt:
     "Adam optimizer wrapper"
@@ -72,10 +72,10 @@ class AAEOpt:
         self.state_dict_d = self.d_opt.state_dict()
         
     def load_state_dict_g(self, state_dict):
-        self.state_dict_g = state_dict
+        self.g_opt.load_state_dict(state_dict)
         
     def load_state_dict_d(self, state_dict):
-        self.state_dict_d = state_dict
+        self.d_opt.load_state_dict(state_dict)
         
     def load_state_dict(self, state_dict_g, state_dict_d):
         self.load_state_dict_g(state_dict_g)

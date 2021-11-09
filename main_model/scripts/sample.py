@@ -5,7 +5,8 @@ import pkg_resources
 import numpy as np
 import pandas as pd
 
-from transvae.trans_models import TransVAE
+from transvae.trans_models import *
+from transvae.transformer_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 from transvae.tvae_util import calc_entropy
 from scripts.parsers import sample_parser
