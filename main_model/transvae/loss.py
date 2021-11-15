@@ -6,7 +6,7 @@ import math, copy, time
 from torch.autograd import Variable
 
 def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
-    "Binary Cross Entropy Loss + Kiebler-Lublach Divergence"
+    "Binary Cross Entropy Loss + Kullback leibler Divergence"
     x = x.long()[:,1:] - 1 #drop the start token
     x = x.contiguous().view(-1) #squeeze into 1 tensor size num_batches*max_seq_len
     x_out = x_out.contiguous().view(-1, x_out.size(2)) # squeeze first and second dims matching above, keeping the 25 class dims.
@@ -14,15 +14,24 @@ def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
     BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights)  #smiles strings have 25 classes or characters (check len(weights))
 
     if pred_prop is not None:
-        MSE = F.mse_loss(pred_prop.squeeze(-1), true_prop)
+        if "decision_tree" in self.params["type_pp"]:
+            #print(pred_prop[:,1])
+            #print(pred_prop.shape, pred_prop.squeeze(-1), true_prop.shape)
+            #bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
+            print(x_out.shape, pred_prop[:,1].shape, BCE)
+            bce_prop=torch.tensor(0.)
+        else: 
+            print(pred_prop)
+            print(pred_prop.shape, pred_prop.squeeze(-1).shape, true_prop.shape)
+            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
-        MSE = torch.tensor(0.)
+        bce_prop = torch.tensor(0.)
     if torch.isnan(KLD):
         KLD = torch.tensor(0.)
-    return BCE + KLD + MSE, BCE, KLD, MSE
+    return BCE + KLD + bce_prop, BCE, KLD, bce_prop
 
 def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_prop, weights, beta=1):
-    "Binary Cross Entropy Loss + Kiebler-Lublach Divergence + Mask Length Prediction"
+    "Binary Cross Entropy Loss + Kullbach leibler Divergence + Mask Length Prediction"
     x = x.long()[:,1:] - 1
     x = x.contiguous().view(-1)
     x_out = x_out.contiguous().view(-1, x_out.size(2))
@@ -31,12 +40,15 @@ def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_pro
     BCEmask = F.cross_entropy(pred_len, true_len, reduction='mean')
     KLD = beta * -0.5 * torch.mean(1 + logvar - mu.pow(2) - logvar.exp())
     if pred_prop is not None:
-        MSE = F.mse_loss(pred_prop.squeeze(-1), true_prop)
+        if "decision_tree" in self.params["type_pp"]:
+            print(pred_prop)
+        else: 
+            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
-        MSE = torch.tensor(0.)
+        bce_prop = torch.tensor(0.)
     if torch.isnan(KLD):
         KLD = torch.tensor(0.)
-    return BCEmol + BCEmask + KLD + MSE, BCEmol, BCEmask, KLD, MSE
+    return BCEmol + BCEmask + KLD + bce_prop, BCEmol, BCEmask, KLD, bce_prop
 
 def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_codes, disc_out, opt, beta=1):
    
@@ -67,7 +79,13 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     disc_loss = 0.5*disc_generator_loss + 0.5*discriminator_loss
     disc_loss.backward() #backpropagating
     opt.d_opt.step() 
-
+    if pred_prop is not None:
+        if "decision_tree" in self.params["type_pp"]:
+            print(pred_prop)
+        else: 
+            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
+    else:
+        bce_prop = torch.tensor(0.)
     return auto_and_gen_loss, BCE, torch.tensor(0.), torch.tensor(0.), disc_loss
 
 def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, beta=1):

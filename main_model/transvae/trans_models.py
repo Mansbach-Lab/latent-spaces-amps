@@ -240,7 +240,7 @@ class VAEShell():
             log_file = open(log_fn, 'a')
             if not already_wrote:
                 log_file.write('epoch,batch_idx,data_type,tot_loss,recon_loss,pred_loss,'\
-                               'kld_loss,prop_mse_loss,disc_loss,mmd_loss,run_time\n')
+                               'kld_loss,prop_bce_loss,disc_loss,mmd_loss,run_time\n')
             log_file.close()
 
         ### Initialize Annealer
@@ -269,7 +269,7 @@ class VAEShell():
                 avg_bce_losses = []
                 avg_bcemask_losses = []
                 avg_kld_losses = []
-                avg_prop_mse_losses = []
+                avg_prop_bce_losses = []
                 avg_disc_losses = []
                 avg_mmd_losses = []
                 start_run_time = perf_counter()
@@ -289,25 +289,25 @@ class VAEShell():
                     tgt_mask = make_std_mask(tgt, self.pad_idx) #cascading true false masking [true false...] [true true false...] ...
                         
                     if self.model_type == 'transformer':
-                        x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
+                        x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)
-                        loss, bce, bce_mask, kld, prop_mse = trans_vae_loss(src, x_out, mu, logvar,
+                        loss, bce, bce_mask, kld, prop_bce = trans_vae_loss(src, x_out, mu, logvar,
                                                                             true_len, pred_len,
                                                                             true_prop, pred_prop,
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                     if self.model_type == 'aae': #the aae loss takes the discriminator output, latent space and optimizer as input
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   self, latent_mem, disc_out, self.optimizer,beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
                     if self.model_type == 'wae': 
-                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, mmd_loss  = wae_loss(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce, mmd_loss  = wae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   latent_mem,
@@ -315,8 +315,8 @@ class VAEShell():
                         avg_mmd_losses.append(mmd_loss.item())
                         
                     if self.model_type == 'rnn' or self.model_type =='rnnattn':
-                        x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'], self,
                                                                   beta)
@@ -324,7 +324,7 @@ class VAEShell():
                     avg_losses.append(loss.item())
                     avg_bce_losses.append(bce.item())
                     avg_kld_losses.append(kld.item())
-                    avg_prop_mse_losses.append(prop_mse.item())
+                    avg_prop_bce_losses.append(prop_bce.item())
                     if not self.model_type == 'aae': #the aae backpropagates in the loss function
                         loss.backward()
                 
@@ -349,7 +349,7 @@ class VAEShell():
                 else:
                     avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
-                avg_prop_mse = np.mean(avg_prop_mse_losses)
+                avg_prop_bce = np.mean(avg_prop_bce_losses)
                 losses.append(avg_loss)
 
                 if log:
@@ -360,7 +360,7 @@ class VAEShell():
                                                                          avg_bce,
                                                                          avg_bcemask,
                                                                          avg_kld,
-                                                                         avg_prop_mse,
+                                                                         avg_prop_bce,
                                                                          avg_disc,
                                                                          avg_mmd,
                                                                          run_time))
@@ -375,7 +375,7 @@ class VAEShell():
                 avg_bce_losses = []
                 avg_bcemask_losses = []
                 avg_kld_losses = []
-                avg_prop_mse_losses = []
+                avg_prop_bce_losses = []
                 avg_disc_losses = []
                 avg_mmd_losses = []
                 start_run_time = perf_counter()
@@ -396,40 +396,40 @@ class VAEShell():
                     
                   
                     if self.model_type == 'transformer':
-                        x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
+                        x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         true_len = src_mask.sum(dim=-1)
-                        loss, bce, bce_mask, kld, prop_mse = trans_vae_loss(src, x_out, mu, logvar,
+                        loss, bce, bce_mask, kld, prop_bce = trans_vae_loss(src, x_out, mu, logvar,
                                                                             true_len, pred_len,
                                                                             true_prop, pred_prop,
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                     if self.model_type == 'aae':
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, disc_loss = aae_loss(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   self, latent_mem, disc_out, self.optimizer,beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
                     if self.model_type == 'wae': 
-                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse, mmd_loss = wae_loss(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce, mmd_loss = wae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   latent_mem,
                                                                   beta)
                         avg_mmd_losses.append(mmd_loss.item())
                     if self.model_type == 'rnn' or self.model_type =='rnnattn':
-                        x_out, mu, logvar, pred_prop = self.model(src, tgt, src_mask, tgt_mask)
-                        loss, bce, kld, prop_mse = self.loss_func(src, x_out, mu, logvar,
+                        x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
+                        loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   beta)
                     avg_losses.append(loss.item())
                     avg_bce_losses.append(bce.item())
                     avg_kld_losses.append(kld.item())
-                    avg_prop_mse_losses.append(prop_mse.item())
+                    avg_prop_bce_losses.append(prop_bce.item())
                 stop_run_time = perf_counter()
                 run_time = round(stop_run_time - start_run_time, 5)
                 avg_loss = np.mean(avg_losses)
@@ -447,7 +447,7 @@ class VAEShell():
                 else:
                     avg_mmd = np.mean(avg_mmd_losses)
                 avg_kld = np.mean(avg_kld_losses)
-                avg_prop_mse = np.mean(avg_prop_mse_losses)
+                avg_prop_bce = np.mean(avg_prop_bce_losses)
                 losses.append(avg_loss)
                 
                
@@ -459,7 +459,7 @@ class VAEShell():
                                                                 avg_bce,
                                                                 avg_bcemask,
                                                                 avg_kld,
-                                                                avg_prop_mse,
+                                                                avg_prop_bce,
                                                                 avg_disc,
                                                                 avg_mmd,
                                                                 run_time))
@@ -831,23 +831,39 @@ class Generator(nn.Module):
 ############## Property Predictor #################
 
 class PropertyPredictor(nn.Module):
-    "Optional property predictor module"
-    def __init__(self, d_pp, depth_pp, d_latent):
+    "Optional property predictor module. Choice between: decision_tree and deep_net"
+    def __init__(self, d_pp, depth_pp, d_latent, type_pp):
         super().__init__()
-        prediction_layers = []
-        for i in range(depth_pp):
-            if i == 0:
-                linear_layer = nn.Linear(d_latent, d_pp)
-            elif i == depth_pp - 1:
-                linear_layer = nn.Linear(d_pp, 1)
-            else:
-                linear_layer = nn.Linear(d_pp, d_pp)
-            prediction_layers.append(linear_layer)
-        self.prediction_layers = ListModule(*prediction_layers)
+        self.type_pp=type_pp
+        
+        if "decision_tree" in self.type_pp:
+            from sklearn.tree import DecisionTreeClassifier
+            self.decision_tree = DecisionTreeClassifier(max_depth=depth_pp)
+     
+        else:
+            prediction_layers = []
+            for i in range(depth_pp):
+                if i == 0:
+                    linear_layer = nn.Linear(d_latent, d_pp)
+                elif i == depth_pp - 1:
+                    linear_layer = nn.Linear(d_pp, 1)
+                else:
+                    linear_layer = nn.Linear(d_pp, d_pp)
+                prediction_layers.append(linear_layer)
+            self.prediction_layers = ListModule(*prediction_layers)
 
-    def forward(self, x):
-        for prediction_layer in self.prediction_layers:
-            x = F.relu(prediction_layer(x))
+    def forward(self, x, true_prop):
+        if "decision_tree" in self.type_pp:
+            print(x.shape, true_prop.shape)
+            self.decision_tree.fit(x.detach().numpy(), true_prop)
+            print("N_classes:",self.decision_tree.n_classes_)
+            x = self.decision_tree.predict_proba(x.detach().numpy()) #score on training data
+        else:
+            for idx, prediction_layer in enumerate(self.prediction_layers):
+                if idx == len(self.prediction_layers)-1:
+                    x = torch.sigmoid(prediction_layer(x))
+                else:
+                    x = torch.relu(prediction_layer(x))
         return x
 
 ############## Embedding Layers ###################

@@ -20,7 +20,7 @@ class AAE(VAEShell):
     def __init__(self, params={}, name=None, N=3, d_model=128,
                  d_latent=128, dropout=0.1, tf=True,
                  bypass_bottleneck=True, property_predictor=False,
-                 d_pp=256, depth_pp=2, load_fn=None, discriminator_layers=[640, 256]):
+                 d_pp=256, depth_pp=2, type_pp='deep_net', load_fn=None, discriminator_layers=[640, 256]):
         super().__init__(params, name)
 
         ### Set learning rate for Adam optimizer
@@ -37,6 +37,7 @@ class AAE(VAEShell):
         self.params['teacher_force'] = tf
         self.params['bypass_bottleneck'] = bypass_bottleneck
         self.params['property_predictor'] = property_predictor
+        self.params['type_pp'] = type_pp
         self.params['d_pp'] = d_pp
         self.params['depth_pp'] = depth_pp
         self.params['discriminator_layers'] = discriminator_layers
@@ -93,7 +94,8 @@ class AAE(VAEShell):
         src_embed = Embeddings(self.params['d_model'], self.vocab_size)
         tgt_embed = Embeddings(self.params['d_model'], self.vocab_size)
         if self.params['property_predictor']:
-            property_predictor = PropertyPredictor(self.params['d_pp'], self.params['depth_pp'], self.params['d_latent'])
+            property_predictor = PropertyPredictor(self.params['d_pp'], self.params['depth_pp'], self.params['d_latent'],
+                                                  self.params['type_pp'])
         else:
             property_predictor = None
         self.model = RNNEncoderDecoder(encoder, decoder, discriminator, src_embed, tgt_embed, generator,
@@ -136,13 +138,13 @@ class RNNEncoderDecoder(nn.Module):
         self.generator = generator
         self.property_predictor = property_predictor
 
-    def forward(self, src, tgt, src_mask=None, tgt_mask=None):
+    def forward(self, src, tgt, true_prop, src_mask=None, tgt_mask=None):
         mem, mu, logvar = self.encode(src) # the mem is the latent space from the encoder
         x, h = self.decode(tgt, mem)
         discriminator_outputs = self.discriminator(mem)  #added the discriminator here
         x = self.generator(x)
         if self.property_predictor is not None:
-            prop = self.predict_property(mu)
+            prop = self.predict_property(mem, true_prop) # the vae bottleneck is bypassed so the "mem" is storing the latent memory
         else:
             prop = None
         return x, mu, logvar, prop, discriminator_outputs, mem
@@ -153,8 +155,8 @@ class RNNEncoderDecoder(nn.Module):
     def decode(self, tgt, mem):
         return self.decoder(self.src_embed(tgt), mem)
 
-    def predict_property(self, mu):
-        return self.property_predictor(mu)
+    def predict_property(self, mem, true_prop):
+        return self.property_predictor(mem, true_prop)
 
 class RNNEncoder(nn.Module):
     """
@@ -186,7 +188,7 @@ class RNNEncoder(nn.Module):
         mem = self.norm(h[-1,:,:])
         if self.bypass_bottleneck:
             mu, logvar = Variable(torch.tensor([0.0])), Variable(torch.tensor([0.0]))
-            mem = self.linear_bypass(mem) #added linear_bypass
+            mem = self.linear_bypass(mem) #added linear_bypass 
         else:
             mu, logvar = self.z_means(mem), self.z_var(mem)
             mem = self.reparameterize(mu, logvar)

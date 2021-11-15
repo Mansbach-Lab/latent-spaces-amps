@@ -32,25 +32,25 @@ def model_init(args, params={}):
         vae = TransVAE(params=params, name=save_name, d_model=args.d_model,
                        d_ff=args.d_feedforward, d_latent=args.d_latent,
                        property_predictor=args.property_predictor, d_pp=args.d_property_predictor,
-                       depth_pp=args.depth_property_predictor)
+                       depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
     elif args.model == 'rnnattn':
         vae = RNNAttn(params=params, name=save_name, d_model=args.d_model,
                       d_latent=args.d_latent, property_predictor=args.property_predictor,
-                      d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+                      d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
     elif args.model == 'rnn':
         vae = RNN(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
-                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
         
     elif args.model == 'aae':
         vae = AAE(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
-                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
         
     elif args.model == 'wae':
         vae = WAE(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
-                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor)
+                  d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
 
     return vae
 
@@ -63,9 +63,10 @@ def train_parser():
     parser.add_argument('--d_model', default=128, type=int)
     parser.add_argument('--d_feedforward', default=128, type=int)
     parser.add_argument('--d_latent', default=128, type=int)
-    parser.add_argument('--property_predictor', default=False, action='store_true')
+    parser.add_argument('--property_predictor', default=False, type=bool)
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
+    parser.add_argument('--type_property_predictor', choices=['decision_tree', 'deep_net'], default='deep_net')
     ### Hyperparameters
     parser.add_argument('--batch_size', default=500, type=int)
     parser.add_argument('--batch_chunks', default=1, type=int)

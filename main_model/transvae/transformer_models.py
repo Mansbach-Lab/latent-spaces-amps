@@ -26,7 +26,7 @@ class TransVAE(VAEShell):
     """
     def __init__(self, params={}, name=None, N=3, d_model=128, d_ff=512,
                  d_latent=128, h=4, dropout=0.1, bypass_bottleneck=False,
-                 property_predictor=False, d_pp=256, depth_pp=2, load_fn=None):
+                 property_predictor=False, d_pp=256, depth_pp=2, type_pp='deep_net', load_fn=None):
         super().__init__(params, name)
         """
         Instatiating a TransVAE object builds the model architecture, data structs
@@ -62,6 +62,7 @@ class TransVAE(VAEShell):
         self.params['dropout'] = dropout
         self.params['bypass_bottleneck'] = bypass_bottleneck
         self.params['property_predictor'] = property_predictor
+        self.params['type_pp'] = type_pp
         self.params['d_pp'] = d_pp
         self.params['depth_pp'] = depth_pp
         self.arch_params = ['N', 'd_model', 'd_ff', 'd_latent', 'h', 'dropout', 'bypass_bottleneck',
@@ -125,7 +126,8 @@ class TransVAE(VAEShell):
         tgt_embed = nn.Sequential(Embeddings(self.params['d_model'], self.vocab_size), c(position))
         generator = Generator(self.params['d_model'], self.vocab_size)
         if self.params['property_predictor']:
-            property_predictor = PropertyPredictor(self.params['d_pp'], self.params['depth_pp'], self.params['d_latent'])
+            property_predictor = PropertyPredictor(self.params['d_pp'], self.params['depth_pp'], self.params['d_latent'],
+                                                   self.params['type_pp'])
         else:
             property_predictor = None
         self.model = EncoderDecoder(encoder, decoder, src_embed, tgt_embed, generator, property_predictor)
@@ -155,13 +157,13 @@ class EncoderDecoder(nn.Module):
         self.generator = generator
         self.property_predictor = property_predictor
 
-    def forward(self, src, tgt, src_mask, tgt_mask):
+    def forward(self, src, tgt, true_prop, src_mask, tgt_mask):
         "Take in and process masked src and tgt sequences (added output shape from conv for decoder ease)"
         mem, mu, logvar, pred_len = self.encode(src, src_mask)
         x = self.decode(mem, src_mask, tgt, tgt_mask)
         x = self.generator(x)
         if self.property_predictor is not None:
-            prop = self.predict_property(mu)
+            prop = self.predict_property(mu, true_prop)
         else:
             prop = None
         return x, mu, logvar, pred_len, prop
@@ -172,8 +174,8 @@ class EncoderDecoder(nn.Module):
     def decode(self, mem, src_mask, tgt, tgt_mask):
         return self.decoder(self.tgt_embed(tgt), mem, src_mask, tgt_mask)
 
-    def predict_property(self, mu):
-        return self.property_predictor(mu)
+    def predict_property(self, mu, true_prop):
+        return self.property_predictor(mu, true_prop)
 
 
 
