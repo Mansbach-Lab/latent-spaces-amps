@@ -18,16 +18,17 @@ import torch.distributed as dist
 import torch.utils.data.distributed
 
 
-####### MODEL SHELL ##########
+####### VAE SHELL ##########
 
 class VAEShell():
     """
-    VAE shell class that includes methods for parameter initiation,
-    data loading, training, logging, checkpointing, loading and saving,
+    VAE shell is a parent class to any created VAE architecture
+    takes care of general functions e.g. saving, loading, training, property predictor
     """
     def __init__(self, params, name=None):
         self.params = params
         self.name = name
+        ###Taking care of un-initialized hyper-params
         if 'BATCH_SIZE' not in self.params.keys():
             self.params['BATCH_SIZE'] = 500
         if 'BATCH_CHUNKS' not in self.params.keys():
@@ -85,7 +86,6 @@ class VAEShell():
     def save(self, state, fn, path='checkpointz', use_name=True):
         """
         Saves current model state to .ckpt file
-
         Arguments:
             state (dict, required): Dictionary containing model state
             fn (str, required): File name to save checkpoint with
@@ -116,7 +116,6 @@ class VAEShell():
     def load(self, checkpoint_path, rank=0):
         """
         Loads a saved model state
-
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
@@ -148,16 +147,15 @@ class VAEShell():
         self.pad_idx = self.params['CHAR_DICT']['_']
         self.build_model()
         
-        # This is temporararily necessary because of saving not being properly done on Compute Canada model
         state_dict = self.current_state['model_state_dict']
-        # create new OrderedDict that does not contain `module.`
+        
+        # Necessary code to remove additional 'module' string attached to 'dict_items' by DDP model
         if 'module' in list(state_dict)[0]:
             from collections import OrderedDict
             new_state_dict = OrderedDict()
             for k, v in state_dict.items():
                 name = k[7:] # remove `module.`
                 new_state_dict[name] = v
-            # load params
             self.model.load_state_dict(new_state_dict)
         else:
             self.model.load_state_dict(self.current_state['model_state_dict'])        
@@ -187,16 +185,16 @@ class VAEShell():
             log (bool): If true, writes training metrics to log file
             log_dir (str): Directory to store log files
         """
-  
+        torch.backends.cudnn.benchmark = True #optimize run-time for fixed model input size
+        
         ### Prepare data iterators
-
         train_data = self.data_gen(train_mols,self.src_len, self.name, train_props, char_dict=self.params['CHAR_DICT'])
         val_data = self.data_gen(val_mols, self.src_len, self.name, val_props, char_dict=self.params['CHAR_DICT'])
+        
         #SPECIAL DATA INPUT FOR DDP
         if self.params['DDP']:
             train_sampler = torch.utils.data.distributed.DistributedSampler(train_data, shuffle=True)
             val_sampler = torch.utils.data.distributed.DistributedSampler(val_data, shuffle=True)
-            
             train_iter = torch.utils.data.DataLoader(train_data,
                                                 batch_size=self.params['BATCH_SIZE'],
                                                 num_workers=0,
@@ -205,7 +203,6 @@ class VAEShell():
                                                 batch_size=self.params['BATCH_SIZE'],
                                                 num_workers=0,
                                                 pin_memory=False, drop_last=True, sampler=val_sampler)
-
         else:
             train_iter = torch.utils.data.DataLoader(train_data,
                                                  batch_size=self.params['BATCH_SIZE'],
@@ -215,15 +212,14 @@ class VAEShell():
                                                batch_size=self.params['BATCH_SIZE'],
                                                shuffle=True, num_workers=0,
                                                pin_memory=False, drop_last=True)
-        self.chunk_size = self.params['BATCH_SIZE'] // self.params['BATCH_CHUNKS']
+        
+        self.chunk_size = self.params['BATCH_SIZE'] // self.params['BATCH_CHUNKS'] #chunks for TransVAE
 
-
-        torch.backends.cudnn.benchmark = True
-
+      
         ### Determine save frequency
         if save_freq is None:
             save_freq = epochs
-
+            
         ### Setup log file
         if log:
             os.makedirs(log_dir, exist_ok=True)
@@ -250,12 +246,11 @@ class VAEShell():
 
         ### Epoch loop
         for epoch in range(epochs):
-        #this first set of lines synchronizes the GPUs for checkpoint loading using DDP
-            if self.params['DDP']:
+            
+            if self.params['DDP']: #Synchronize the GPUs for checkpoint loading using DDP
                 ngpus_per_node = torch.cuda.device_count()
                 local_rank = int(os.environ.get("SLURM_LOCALID")) 
                 rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-            
                 if rank==0 or rank==1 or rank==2 or rank==3:
                     dist.barrier()
         
@@ -273,6 +268,7 @@ class VAEShell():
                 avg_disc_losses = []
                 avg_mmd_losses = []
                 start_run_time = perf_counter()
+                
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                     mols_data = batch_data[:,:-1]
@@ -280,8 +276,6 @@ class VAEShell():
                     if self.use_gpu:
                         mols_data = mols_data.cuda()
                         props_data = props_data.cuda()
-
-
                     src = Variable(mols_data).long()
                     tgt = Variable(mols_data[:,:-1]).long()                 
                     true_prop = Variable(props_data)
@@ -297,13 +291,14 @@ class VAEShell():
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
+                        
                     if self.model_type == 'aae': #the aae loss takes the discriminator output, latent space and optimizer as input
                         x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   self, latent_mem, disc_out, self.optimizer,beta)
-                        avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
+                        avg_disc_losses.append(disc_loss.item()) #append the disc loss from aae
                         
                     if self.model_type == 'wae': 
                         x_out, mu, logvar, pred_prop, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
@@ -312,7 +307,7 @@ class VAEShell():
                                                                   self.params['CHAR_WEIGHTS'],
                                                                   latent_mem,
                                                                   beta)
-                        avg_mmd_losses.append(mmd_loss.item())
+                        avg_mmd_losses.append(mmd_loss.item()) #append the mmd loss from wae
                         
                     if self.model_type == 'rnn' or self.model_type =='rnnattn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
@@ -386,14 +381,12 @@ class VAEShell():
                     if self.use_gpu:
                         mols_data = mols_data.cuda()
                         props_data = props_data.cuda()
-
                     src = Variable(mols_data).long()
                     tgt = Variable(mols_data[:,:-1]).long()
                     true_prop = Variable(props_data)
                     src_mask = (src != self.pad_idx).unsqueeze(-2)
                     tgt_mask = make_std_mask(tgt, self.pad_idx)
                     scores = Variable(data[:,-1])
-                    
                   
                     if self.model_type == 'transformer':
                         x_out, mu, logvar, pred_len, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
@@ -404,6 +397,7 @@ class VAEShell():
                                                                             self.params['CHAR_WEIGHTS'],
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
+                        
                     if self.model_type == 'aae':
                         x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
@@ -420,6 +414,7 @@ class VAEShell():
                                                                   latent_mem,
                                                                   beta)
                         avg_mmd_losses.append(mmd_loss.item())
+                        
                     if self.model_type == 'rnn' or self.model_type =='rnnattn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
@@ -450,7 +445,6 @@ class VAEShell():
                 avg_prop_bce = np.mean(avg_prop_bce_losses)
                 losses.append(avg_loss)
                 
-               
                 if log:
                     log_file = open(log_fn, 'a')
                     log_file.write('{},{},{},{},{},{},{},{},{},{},{}\n'.format(self.n_epochs,
@@ -490,8 +484,8 @@ class VAEShell():
                     if self.params['DDP']:
                         if rank ==0:
                             self.save(self.current_state, epoch_str)
-
-                    else: self.save(self.current_state, epoch_str)
+                    else: 
+                        self.save(self.current_state, epoch_str)
 
     ### Sampling and Decoding Functions
     def sample_from_memory(self, size, mode='rand', sample_dims=None, k=5):
