@@ -26,16 +26,16 @@ CLASSIFIERS = ["Intended Audience :: Science/Research",
 with open('README.md') as readme_file:
     README = readme_file.read()
 
-NAME = "transvae"
-MAINTAINER = "Orion Dollar"
-MAINTAINER_EMAIL = "orion.dollar@gmail.com"
-DESCRIPTION = "A package for training and analyzing attention-based VAEs for molecular design."
+NAME = "TBD"
+MAINTAINER = "Samuel Renaud"
+MAINTAINER_EMAIL = "samuel.renaud@concordia.ca"
+DESCRIPTION = "A project comparing VAEs for de novo antimicrobial peptide generation"
 CONTENT_TYPE="text/markdown"
-URL = "https://github.com/oriondollar/TransVAE"
+URL = "https://github.com/Mansbach-Lab/MSCSAM_TBD"
 DOWNLOAD_URL = ""
 LICENSE = "MIT License"
-AUTHOR = "Orion Dollar"
-AUTHOR_EMAIL = "orion.dollar@gmail.com"
+AUTHOR = "Samuel Renaud"
+AUTHOR_EMAIL = "samuel.renaud@concordia.ca"
 PLATFORMS = "OS Independent"
 MAJOR = _version_major
 MINOR = _version_minor
