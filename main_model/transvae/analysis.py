@@ -73,17 +73,18 @@ def plot_loss_by_type(path, colors=None):
 
     plt.figure(figsize=(10,8))
     ax = plt.subplot(111)
-
-    loss_types = ['tot_loss', 'recon_loss', 'kld_loss']
+    start_pt = 0 #start the graph at a custom index
+    
+    loss_types = ['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss']
     for i, loss_type in enumerate(loss_types):
         train_data = df[df.data_type == 'train'].groupby('epoch').mean()[loss_type]
         test_data = df[df.data_type == 'test'].groupby('epoch').mean()[loss_type]
-        plt.plot(train_data, c=colors[i], label='train_'+loss_type)
-        plt.plot(test_data, c=colors[i], label='test_'+loss_type, ls=':')
+        plt.plot(train_data[start_pt:], c=colors[i], label='train_'+loss_type)
+        plt.plot(test_data[start_pt:], c=colors[i], label='test_'+loss_type, ls=':')
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    #plt.yscale('log')
+    plt.yscale('log')
     plt.ylabel('Loss', rotation='horizontal')
     plt.xlabel('epoch')
     plt.title(path.split('/')[-1].split('log_GRUGRU_')[-1].split('.')[0])

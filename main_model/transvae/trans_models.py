@@ -288,7 +288,7 @@ class VAEShell():
                         loss, bce, bce_mask, kld, prop_bce = trans_vae_loss(src, x_out, mu, logvar,
                                                                             true_len, pred_len,
                                                                             true_prop, pred_prop,
-                                                                            self.params['CHAR_WEIGHTS'],
+                                                                            self.params['CHAR_WEIGHTS'], self,
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                         
@@ -305,7 +305,7 @@ class VAEShell():
                         loss, bce, kld, prop_bce, mmd_loss  = wae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  latent_mem,
+                                                                  latent_mem, self,
                                                                   beta)
                         avg_mmd_losses.append(mmd_loss.item()) #append the mmd loss from wae
                         
@@ -586,59 +586,60 @@ class VAEShell():
                                    token ids
             mems (np.array): Array of model memory vectors
         """
-        data = vae_data_gen(data,max_len=self.src_len,name=self.name, char_dict=self.params['CHAR_DICT'])
-        data_iter = torch.utils.data.DataLoader(data,
-                                                batch_size=self.params['BATCH_SIZE'],
-                                                shuffle=False, num_workers=0,
-                                                pin_memory=False, drop_last=True)
-        self.batch_size = self.params['BATCH_SIZE']
-        self.chunk_size = self.batch_size // self.params['BATCH_CHUNKS']
+        with torch.no_grad():
+            data = vae_data_gen(data,max_len=self.src_len,name=self.name, char_dict=self.params['CHAR_DICT'])
+            data_iter = torch.utils.data.DataLoader(data,
+                                                    batch_size=self.params['BATCH_SIZE'],
+                                                    shuffle=False, num_workers=0,
+                                                    pin_memory=False, drop_last=True)
+            self.batch_size = self.params['BATCH_SIZE']
+            self.chunk_size = self.batch_size // self.params['BATCH_CHUNKS']
 
-        self.model.eval()
-        decoded_smiles = []
-        mems = torch.empty((data.shape[0], self.params['d_latent'])).cpu()
-        for j, data in enumerate(data_iter):
-            if log:
-                log_file = open('calcs/{}_progress.txt'.format(self.name), 'a')
-                log_file.write('{}\n'.format(j))
-                log_file.close()
-            for i in range(self.params['BATCH_CHUNKS']):
-                batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
-                mols_data = batch_data[:,:-1]
-                if self.use_gpu:
-                    batch_data = batch_data.cuda()
+            self.model.eval()
+            decoded_smiles = []
+            mems = torch.empty((data.shape[0], self.params['d_latent'])).cpu()
+            for j, data in enumerate(data_iter):
+                if log:
+                    log_file = open('calcs/{}_progress.txt'.format(self.name), 'a')
+                    log_file.write('{}\n'.format(j))
+                    log_file.close()
+                for i in range(self.params['BATCH_CHUNKS']):
+                    batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
+                    mols_data = batch_data[:,:-1]
+                    if self.use_gpu:
+                        batch_data = batch_data.cuda()
 
-                src = Variable(mols_data).long()
-                src_mask = (src != self.pad_idx).unsqueeze(-2)
-                ### Run through encoder to get memory
-                if self.model_type == 'transformer':
-                    _, mem, _, _ = self.model.encode(src, src_mask)
-                elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
-                     mem, _, _ = self.model.encode(src)
-                elif self.model_type == 'wae':
-                     mem, _, _ = self.model.encode(src)
-                else:
-                    _, mem, _ = self.model.encode(src)
-                start = j*self.batch_size+i*self.chunk_size
-                stop = j*self.batch_size+(i+1)*self.chunk_size
-                mems[start:stop, :] = mem.detach().cpu()
+                    src = Variable(mols_data).long()
+                    src_mask = (src != self.pad_idx).unsqueeze(-2)
+                    ### Run through encoder to get memory
+                    if self.model_type == 'transformer':
+                        _, mem, _, _ = self.model.encode(src, src_mask)
+                    elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
+                         mem, _, _ = self.model.encode(src)
+                    elif self.model_type == 'wae':
+                         mem, _, _ = self.model.encode(src)
+                    else:
+                        _, mem, _ = self.model.encode(src)
+                    start = j*self.batch_size+i*self.chunk_size
+                    stop = j*self.batch_size+(i+1)*self.chunk_size
+                    mems[start:stop, :] = mem.detach().cpu()
 
-                ### Decode logic
-                if method == 'greedy':
-                    decoded = self.greedy_decode(mem, src_mask=src_mask)
-                else:
-                    decoded = None
+                    ### Decode logic
+                    if method == 'greedy':
+                        decoded = self.greedy_decode(mem, src_mask=src_mask)
+                    else:
+                        decoded = None
 
-                if return_str:
-                    decoded = decode_mols(decoded, self.params['ORG_DICT'])
-                    decoded_smiles += decoded
-                else:
-                    decoded_smiles.append(decoded)
+                    if return_str:
+                        decoded = decode_mols(decoded, self.params['ORG_DICT'])
+                        decoded_smiles += decoded
+                    else:
+                        decoded_smiles.append(decoded)
 
-        if return_mems:
-            return decoded_smiles, mems.detach().numpy()
-        else:
-            return decoded_smiles
+            if return_mems:
+                return decoded_smiles, mems.detach().numpy()
+            else:
+                return decoded_smiles
 
     def sample(self, n, method='greedy', sample_mode='rand',
                         sample_dims=None, k=None, return_str=True):

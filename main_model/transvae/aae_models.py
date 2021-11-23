@@ -12,6 +12,9 @@ from transvae.tvae_util import *
 from transvae.opt import NoamOpt, AdamOpt, AAEOpt
 from transvae.trans_models import VAEShell, Generator, ConvBottleneck, DeconvBottleneck, PropertyPredictor, Embeddings, LayerNorm
 
+import torch.distributed as dist
+import torch.utils.data.distributed
+
 class AAE(VAEShell):
     """
     AAE architecture
@@ -46,7 +49,7 @@ class AAE(VAEShell):
 
         ### Build model architecture
         if load_fn is None:
-            self.build_model()
+            
             if self.params['DDP']:
                 ### prepare distributed data parallel (added by Samuel Renaud)
                 print("GPUs per node: ",torch.cuda.device_count())
@@ -63,6 +66,8 @@ class AAE(VAEShell):
                 current_device = int(available_gpus[local_rank])
                 torch.cuda.set_device(current_device)
 
+                self.build_model()
+
                 """ this block initializes a process group and initiate communications
                         between all processes running on all nodes """
                 print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
@@ -73,6 +78,8 @@ class AAE(VAEShell):
                 print('From Rank: {}, ==> Making model..'.format(rank))
 
                 self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device])
+            else:
+                self.build_model()
         else:
             self.load(load_fn)
 

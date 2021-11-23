@@ -17,12 +17,9 @@ def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
         if "decision_tree" in self.params["type_pp"]:
             #print(pred_prop[:,1])
             #print(pred_prop.shape, pred_prop.squeeze(-1), true_prop.shape)
-            #bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
-            print(x_out.shape, pred_prop[:,1].shape, BCE)
+            #bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)            
             bce_prop=torch.tensor(0.)
         else: 
-            print(pred_prop)
-            print(pred_prop.shape, pred_prop.squeeze(-1).shape, true_prop.shape)
             bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
         bce_prop = torch.tensor(0.)
@@ -30,7 +27,7 @@ def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
         KLD = torch.tensor(0.)
     return BCE + KLD + bce_prop, BCE, KLD, bce_prop
 
-def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_prop, weights, beta=1):
+def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_prop, weights, self, beta=1):
     "Binary Cross Entropy Loss + Kullbach leibler Divergence + Mask Length Prediction"
     x = x.long()[:,1:] - 1
     x = x.contiguous().view(-1)
@@ -61,7 +58,12 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     opt.g_opt.zero_grad() #zeroing gradients
     BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights) #autoencoder loss
 
-    valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False) #valid
+    use_gpu = torch.cuda.is_available()
+    if use_gpu:
+        valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False).cuda() #valid
+    else:
+        valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False) #valid
+        
     generator_loss = F.binary_cross_entropy_with_logits(disc_out, valid_discriminator_targets) #discriminator loss vs. valid
     auto_and_gen_loss = BCE + generator_loss
 
@@ -86,9 +88,9 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
             bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
         bce_prop = torch.tensor(0.)
-    return auto_and_gen_loss, BCE, torch.tensor(0.), torch.tensor(0.), disc_loss
+    return auto_and_gen_loss, BCE, torch.tensor(0.), bce_prop, disc_loss
 
-def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, beta=1):
+def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, self, beta=1):
     "reconstruction and mmd loss"
     #reconstruction loss
     x = x.long()[:,1:] - 1 
@@ -100,14 +102,27 @@ def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, 
     z_tilde = latent_codes
     z_var = 2 #variance of gaussian
     sigma = math.sqrt(2)#sigma (Number): scalar variance of isotropic gaussian prior P(Z). set to sqrt(2)
-    z = sigma*torch.randn(latent_codes.shape) #sample gaussian
-    
+    use_gpu = torch.cuda.is_available()
+    if use_gpu:
+        z = sigma*torch.randn(latent_codes.shape).cuda() #sample gaussian
+    else:
+        z = sigma*torch.randn(latent_codes.shape) #sample gaussian
     n = z.size(0)
-    mmd = im_kernel_sum(z, z, z_var, exclude_diag=True).div(n*(n-1)) + \
-          im_kernel_sum(z_tilde, z_tilde, z_var, exclude_diag=True).div(n*(n-1)) + \
-          -im_kernel_sum(z, z_tilde, z_var, exclude_diag=False).div(n*n).mul(2)
-
-    return BCE + mmd, BCE, torch.tensor(0.), torch.tensor(0.), mmd
+    im_kernel_sum_1 = im_kernel_sum(z, z, z_var, exclude_diag=True).div(n*(n-1))
+    im_kernel_sum_2 = im_kernel_sum(z_tilde, z_tilde, z_var, exclude_diag=True).div(n*(n-1))
+    im_kernel_sum_3 = -im_kernel_sum(z, z_tilde, z_var, exclude_diag=False).div(n*n).mul(2)
+    
+    mmd =  im_kernel_sum_1+im_kernel_sum_2+im_kernel_sum_3
+    
+    if pred_prop is not None:
+        if "decision_tree" in self.params["type_pp"]:
+            print(pred_prop)
+        else: 
+            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
+    else:
+        bce_prop = torch.tensor(0.)
+    
+    return BCE + mmd, BCE, torch.tensor(0.), bce_prop, mmd
 
 def im_kernel_sum(z1, z2, z_var, exclude_diag=True):
     "adapted from  https://github.com/1Konny/WAE-pytorch/blob/master/ops.py"
