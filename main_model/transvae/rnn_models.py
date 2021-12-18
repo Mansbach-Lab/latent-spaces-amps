@@ -416,7 +416,9 @@ class RNNDecoder(nn.Module):
             mem = mem.unsqueeze(1).repeat(1, self.max_length, 1)
             mem = self.norm(mem)
         if self.teacher_force:
+            #print("before cat tf: ", mem.shape, mem[0][0])
             mem = torch.cat((embedded, mem), dim=2)
+            #print("after cat tf: ", mem.shape, mem[0][0])
         mem = mem.permute(1, 0, 2)
         mem = mem.contiguous()
         x, h = self.gru(mem, h)

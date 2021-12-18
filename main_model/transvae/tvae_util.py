@@ -180,22 +180,22 @@ def decode_mols(encoded_tensors, org_dict):
         mols.append(mol_string)
     return mols
 
-def calc_reconstruction_accuracies(input_smiles, output_smiles):
-    "Calculates SMILE, token and positional accuracies for a set of\
-    input and reconstructed SMILES strings"
+def calc_reconstruction_accuracies(input_sequences, output_sequences):
+    "Calculates sequence, token and positional accuracies for a set of\
+    input and reconstructed sequences"
     max_len = 126
-    smile_accs = []
+    seq_accs = []
     hits = 0
     misses = 0
     position_accs = np.zeros((2, max_len))
-    for in_smi, out_smi in zip(input_smiles, output_smiles):
-        if in_smi == out_smi:
-            smile_accs.append(1)
+    for in_seq, out_seq in zip(input_sequences, output_sequences):
+        if in_seq == out_seq:
+            seq_accs.append(1)
         else:
-            smile_accs.append(0)
+            seq_accs.append(0)
 
-        misses += abs(len(in_smi) - len(out_smi))
-        for j, (token_in, token_out) in enumerate(zip(in_smi, out_smi)):
+        misses += abs(len(in_seq) - len(out_seq))
+        for j, (token_in, token_out) in enumerate(zip(in_seq, out_seq)):
             if token_in == token_out:
                 hits += 1
                 position_accs[0,j] += 1
@@ -203,12 +203,45 @@ def calc_reconstruction_accuracies(input_smiles, output_smiles):
                 misses += 1
             position_accs[1,j] += 1
 
-    smile_acc = np.mean(smile_accs)
+    seq_acc = np.mean(seq_accs)
     token_acc = hits / (hits + misses)
     position_acc = []
     for i in range(max_len):
         position_acc.append(position_accs[0,i] / position_accs[1,i])
-    return smile_acc, token_acc, position_acc
+    return seq_acc, token_acc, position_acc
+
+def calc_property_accuracies(pred_props, true_props, MCC=False):
+    import math
+    binary_predictions = np.round(pred_props) #round the output float from the network to either 0 or 1
+    TN = 0
+    TP = 0
+    FP = 0
+    FN = 0
+    for idx, prop in enumerate(binary_predictions):
+        if true_props[idx] == 0 and prop == true_props[idx]:
+            TN += 1
+            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "True Negative")
+        if true_props[idx] == 1 and prop == true_props[idx]:
+            TP += 1
+            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "True Positive") 
+        if true_props[idx] == 0 and prop != true_props[idx]:
+            FP += 1
+            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "False Positive")
+        if true_props[idx] == 1 and prop != true_props[idx]:
+            FN += 1
+            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "False Negative")
+    acc = (TN + TP) / (TN+TP+FP+FN)
+    print("property accuracy :",(TN + TP),"/",(TN+TP+FP+FN),"=",(TN + TP) / (TN+TP+FP+FN) )
+    if MCC:
+        N = TN + TP + FN + FP
+        S = (TP + FN) / N
+        P = (TP + FP) / N
+        if S!=1 and P!=1:
+            MCC = ( (TP/N)-(S*P) )/ math.sqrt(P*S*(1-S)*(1-P))
+        else: MCC="Data error"
+        print("MCC: ", MCC)
+    return
+   
 
 def calc_entropy(sample):
     "Calculates Shannon information entropy for a set of input memories"

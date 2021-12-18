@@ -538,6 +538,7 @@ class VAEShell():
             for i in range(mask_lens.shape[0]):
                 mask_len = mask_lens[i].item()
                 src_mask[i,:,:mask_len] = torch.ones((1, 1, mask_len))
+        
         elif self.model_type != 'transformer':
             src_mask = torch.ones((mem.shape[0], 1, self.src_len))
 
@@ -554,8 +555,10 @@ class VAEShell():
                     decode_mask = decode_mask.cuda()
                 out = self.model.decode(mem, src_mask, Variable(decoded),
                                         decode_mask)
+               
             else:
                 out, _ = self.model.decode(tgt, mem)
+                
             out = self.model.generator(out)
             prob = F.softmax(out[:,i,:], dim=-1)
             _, next_word = torch.max(prob, dim=1)
@@ -613,13 +616,21 @@ class VAEShell():
                     src_mask = (src != self.pad_idx).unsqueeze(-2)
                     ### Run through encoder to get memory
                     if self.model_type == 'transformer':
-                        _, mem, _, _ = self.model.encode(src, src_mask)
+                        with torch.no_grad():
+                            _, mem, _, _ = self.model.encode(src, src_mask)
                     elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
-                         mem, _, _ = self.model.encode(src)
+                        with torch.no_grad():
+                            mem, _, _ = self.model.encode(src)
                     elif self.model_type == 'wae':
-                         mem, _, _ = self.model.encode(src)
+                        with torch.no_grad():
+                            mem, _, _ = self.model.encode(src)
                     else:
-                        _, mem, _ = self.model.encode(src)
+                        with torch.no_grad():
+                            _, mem, _ = self.model.encode(src)
+                                                
+                    if self.params['property_predictor'] == True:
+                        props = self.model.predict_property(mem, torch.tensor(0.))
+                        
                     start = j*self.batch_size+i*self.chunk_size
                     stop = j*self.batch_size+(i+1)*self.chunk_size
                     mems[start:stop, :] = mem.detach().cpu()
@@ -637,9 +648,9 @@ class VAEShell():
                         decoded_smiles.append(decoded)
 
             if return_mems:
-                return decoded_smiles, mems.detach().numpy()
+                return decoded_smiles, props, mems.detach().numpy()
             else:
-                return decoded_smiles
+                return decoded_smiles, props
 
     def sample(self, n, method='greedy', sample_mode='rand',
                         sample_dims=None, k=None, return_str=True):

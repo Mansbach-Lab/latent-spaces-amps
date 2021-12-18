@@ -73,6 +73,7 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     #discriminator loss
     opt.d_opt.zero_grad()#zeroing gradients
     fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ) #fake
+    print(dir(self))
     disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()), fake_discriminator_targets) 
 
     discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ) #valid
@@ -93,6 +94,7 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
 def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, self, beta=1):
     "reconstruction and mmd loss"
     #reconstruction loss
+    print(len(self.model.state_dict()))
     x = x.long()[:,1:] - 1 
     x = x.contiguous().view(-1)
     x_out = x_out.contiguous().view(-1, x_out.size(2)) 
@@ -122,7 +124,7 @@ def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, 
     else:
         bce_prop = torch.tensor(0.)
     
-    return BCE + mmd, BCE, torch.tensor(0.), bce_prop, mmd
+    return BCE + mmd + bce_prop, BCE, torch.tensor(0.), bce_prop, mmd
 
 def im_kernel_sum(z1, z2, z_var, exclude_diag=True):
     "adapted from  https://github.com/1Konny/WAE-pytorch/blob/master/ops.py"
