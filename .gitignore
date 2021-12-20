@@ -6,7 +6,9 @@
 *.npz
 *.ckpt
 *.zip
-*.txt
 *.dict
 main_model/data/peptides/500_fasta.fasta
 main_model/data/peptides/500k/500_fasta.fasta
+outsourced_models/
+main_model/checkpointz
+main_model/trials
