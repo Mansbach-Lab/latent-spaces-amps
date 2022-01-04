@@ -63,12 +63,13 @@ def train_parser():
     parser.add_argument('--d_model', default=128, type=int)
     parser.add_argument('--d_feedforward', default=128, type=int)
     parser.add_argument('--d_latent', default=128, type=int)
-    parser.add_argument('--property_predictor', default=False, type=bool)
+    parser.add_argument('--property_predictor', choices=['ON', 'OFF'], default='OFF', type=str)
     parser.add_argument('--d_property_predictor', default=256, type=int)
     parser.add_argument('--depth_property_predictor', default=2, type=int)
-    parser.add_argument('--type_property_predictor', choices=['decision_tree', 'deep_net'], default='deep_net')
+    parser.add_argument('--type_property_predictor', choices=['decision_tree', 'deep_net'], default='deep_net', type=str)
+    parser.add_argument('--hardware', choices=['cpu', 'gpu'], required=True, type=str)
     ### Hyperparameters
-    parser.add_argument('--batch_size', default=500, type=int)
+    parser.add_argument('--batch_size', default=200, type=int)
     parser.add_argument('--batch_chunks', default=1, type=int)
     parser.add_argument('--beta', default=0.05, type=float)
     parser.add_argument('--beta_init', default=1e-8, type=float)
@@ -99,9 +100,9 @@ def train_parser():
     parser.add_argument('--world_size', default=1, type=int)
     parser.add_argument('--distributed', action='store_true')
     parser.add_argument('--num_workers', type=int, default=0)
-    parser.add_argument('--DDP', type=bool, default=False)
+    parser.add_argument('--DDP', choices=['ON','OFF'], default='OFF', type=str)
     
-    """AAE aArguments"""
+    """AAE Arguments"""
     parser.add_argument('--discriminator_layers', nargs='+', type=int, default=[640, 256], 
                         help='Numbers of features for linear layers in discriminator')
 

@@ -7,7 +7,7 @@ import pandas as pd
 
 import torch
 
-from transvae import *
+#from transvae import *
 from transvae.transformer_models import TransVAE
 from transvae.rnn_models import RNN, RNNAttn
 from scripts.parsers import model_init, train_parser
@@ -22,6 +22,14 @@ def train(args):
         beta_init = (args.beta - args.beta_init) / total_epochs * start_epoch
         args.beta_init = beta_init
 
+    if 'ON' in args.DDP: #bizare behaviour of arg parser with booleans means we convert here...
+        args.DDP= True
+    else:
+        args.DDP=False
+    if 'ON' in args.property_predictor:
+        property_predictor= True
+    else: 
+        args.property_predictor = False
     ### Build params dict from the parsed arguments
     params = {'ADAM_LR': args.adam_lr,
               'ANNEAL_START': args.anneal_start,
@@ -30,6 +38,7 @@ def train(args):
               'BETA': args.beta,
               'BETA_INIT': args.beta_init,
               'EPS_SCALE': args.eps_scale,
+              'HARDWARE' : args.hardware,
               'LR_SCALE': args.lr_scale,
               'WARMUP_STEPS': args.warmup_steps,
               'INIT_METHOD': args.init_method,

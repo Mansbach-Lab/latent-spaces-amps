@@ -14,10 +14,7 @@ def vae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, beta=1):
     BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights)  #smiles strings have 25 classes or characters (check len(weights))
 
     if pred_prop is not None:
-        if "decision_tree" in self.params["type_pp"]:
-            #print(pred_prop[:,1])
-            #print(pred_prop.shape, pred_prop.squeeze(-1), true_prop.shape)
-            #bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)            
+        if "decision_tree" in self.params["type_pp"]:            
             bce_prop=torch.tensor(0.)
         else: 
             bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
@@ -47,8 +44,7 @@ def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_pro
         KLD = torch.tensor(0.)
     return BCEmol + BCEmask + KLD + bce_prop, BCEmol, BCEmask, KLD, bce_prop
 
-def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_codes, disc_out, opt, beta=1):
-   
+def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_codes, disc_out, opt, train_test, beta=1):
     #formatting x
     x = x.long()[:,1:] - 1 
     x = x.contiguous().view(-1) 
@@ -58,8 +54,7 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     opt.g_opt.zero_grad() #zeroing gradients
     BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights) #autoencoder loss
 
-    use_gpu = torch.cuda.is_available()
-    if use_gpu:
+    if 'gpu' in self.params['HARDWARE']:
         valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False).cuda() #valid
     else:
         valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False) #valid
@@ -67,21 +62,35 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     generator_loss = F.binary_cross_entropy_with_logits(disc_out, valid_discriminator_targets) #discriminator loss vs. valid
     auto_and_gen_loss = BCE + generator_loss
 
-    auto_and_gen_loss.backward() #backpropagating
-    opt.g_opt.step()
-
+    if 'train' in train_test:
+        auto_and_gen_loss.backward() #backpropagating
+        opt.g_opt.step()
     #discriminator loss
     opt.d_opt.zero_grad()#zeroing gradients
-    fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ) #fake
-    print(dir(self))
-    disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()), fake_discriminator_targets) 
-
-    discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ) #valid
-    discriminator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()), discriminator_targets)
-
+    if 'gpu' in self.params['HARDWARE']:
+        fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ).cuda() #fake
+    else:
+        fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ) #fake
+    if "module" in dir(self.model): #for ddp which has a "module" term attached to model
+        disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.module.discriminator(latent_codes.detach()),
+                                                                 fake_discriminator_targets) 
+    else: 
+        disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()),
+                                                                 fake_discriminator_targets) 
+    if 'gpu' in self.params['HARDWARE']:
+        discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ).cuda() #valid
+    else:
+        discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ) #valid
+    if "module" in dir(self.model):
+        discriminator_loss = F.binary_cross_entropy_with_logits(self.model.module.discriminator(latent_codes.detach()),
+                                                                discriminator_targets)
+    else:
+        discriminator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()), discriminator_targets)
+        
     disc_loss = 0.5*disc_generator_loss + 0.5*discriminator_loss
-    disc_loss.backward() #backpropagating
-    opt.d_opt.step() 
+    if 'train' in train_test:
+        disc_loss.backward() #backpropagating
+        opt.d_opt.step() 
     if pred_prop is not None:
         if "decision_tree" in self.params["type_pp"]:
             print(pred_prop)
@@ -94,7 +103,7 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
 def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, self, beta=1):
     "reconstruction and mmd loss"
     #reconstruction loss
-    print(len(self.model.state_dict()))
+    #print(len(self.model.state_dict()))
     x = x.long()[:,1:] - 1 
     x = x.contiguous().view(-1)
     x_out = x_out.contiguous().view(-1, x_out.size(2)) 
@@ -104,8 +113,7 @@ def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, 
     z_tilde = latent_codes
     z_var = 2 #variance of gaussian
     sigma = math.sqrt(2)#sigma (Number): scalar variance of isotropic gaussian prior P(Z). set to sqrt(2)
-    use_gpu = torch.cuda.is_available()
-    if use_gpu:
+    if 'gpu' in self.params['HARDWARE']:
         z = sigma*torch.randn(latent_codes.shape).cuda() #sample gaussian
     else:
         z = sigma*torch.randn(latent_codes.shape) #sample gaussian

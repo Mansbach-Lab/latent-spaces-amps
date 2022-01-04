@@ -67,7 +67,7 @@ class VAEShell():
             self.params['DDP'] = False
         self.loss_func = vae_loss
         self.data_gen = vae_data_gen
-
+        print(self.params)
         ### Sequence length hard-coded into model
         self.src_len = 126
         self.tgt_len = 125
@@ -119,6 +119,8 @@ class VAEShell():
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
+        if 'HARDWARE' not in self.params.keys():
+            self.params['HARDWARE'] = 'gpu'
         if self.params['DDP']:
             map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
             loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
@@ -150,6 +152,7 @@ class VAEShell():
         state_dict = self.current_state['model_state_dict']
         
         # Necessary code to remove additional 'module' string attached to 'dict_items' by DDP model
+        print(list(state_dict)[0])
         if 'module' in list(state_dict)[0]:
             from collections import OrderedDict
             new_state_dict = OrderedDict()
@@ -273,7 +276,7 @@ class VAEShell():
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                     mols_data = batch_data[:,:-1]
                     props_data = batch_data[:,-1]
-                    if self.use_gpu:
+                    if 'gpu' in self.params['HARDWARE']:
                         mols_data = mols_data.cuda()
                         props_data = props_data.cuda()
                     src = Variable(mols_data).long()
@@ -297,7 +300,7 @@ class VAEShell():
                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,beta)
+                                                                  self, latent_mem, disc_out, self.optimizer,'train', beta)
                         avg_disc_losses.append(disc_loss.item()) #append the disc loss from aae
                         
                     if self.model_type == 'wae': 
@@ -378,7 +381,7 @@ class VAEShell():
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                     mols_data = batch_data[:,:-1]
                     props_data = batch_data[:,-1]
-                    if self.use_gpu:
+                    if 'gpu' in self.params['HARDWARE']:
                         mols_data = mols_data.cuda()
                         props_data = props_data.cuda()
                     src = Variable(mols_data).long()
@@ -394,7 +397,7 @@ class VAEShell():
                         loss, bce, bce_mask, kld, prop_bce = trans_vae_loss(src, x_out, mu, logvar,
                                                                             true_len, pred_len,
                                                                             true_prop, pred_prop,
-                                                                            self.params['CHAR_WEIGHTS'],
+                                                                            self.params['CHAR_WEIGHTS'], self,
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                         
@@ -403,7 +406,7 @@ class VAEShell():
                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,beta)
+                                                                  self, latent_mem, disc_out, self.optimizer,'test', beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
                     if self.model_type == 'wae': 
@@ -411,7 +414,7 @@ class VAEShell():
                         loss, bce, kld, prop_bce, mmd_loss = wae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'],
-                                                                  latent_mem,
+                                                                  latent_mem, self,
                                                                   beta)
                         avg_mmd_losses.append(mmd_loss.item())
                         
@@ -419,7 +422,7 @@ class VAEShell():
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
+                                                                  self.params['CHAR_WEIGHTS'], self,
                                                                   beta)
                     avg_losses.append(loss.item())
                     avg_bce_losses.append(bce.item())
@@ -542,7 +545,7 @@ class VAEShell():
         elif self.model_type != 'transformer':
             src_mask = torch.ones((mem.shape[0], 1, self.src_len))
 
-        if self.use_gpu:
+        if 'gpu' in self.params['HARDWARE']:
             src_mask = src_mask.cuda()
             decoded = decoded.cuda()
             tgt = tgt.cuda()
@@ -551,7 +554,7 @@ class VAEShell():
         for i in range(max_len):
             if self.model_type == 'transformer':
                 decode_mask = Variable(subsequent_mask(decoded.size(1)).long())
-                if self.use_gpu:
+                if 'gpu' in self.params['HARDWARE']:
                     decode_mask = decode_mask.cuda()
                 out = self.model.decode(mem, src_mask, Variable(decoded),
                                         decode_mask)
@@ -609,7 +612,7 @@ class VAEShell():
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                     mols_data = batch_data[:,:-1]
-                    if self.use_gpu:
+                    if 'gpu' in self.params['HARDWARE']:
                         batch_data = batch_data.cuda()
 
                     src = Variable(mols_data).long()
@@ -674,7 +677,7 @@ class VAEShell():
         """
         mem = self.sample_from_memory(n, mode=sample_mode, sample_dims=sample_dims, k=k)
 
-        if self.use_gpu:
+        if 'gpu' in self.params['HARDWARE']:
             mem = mem.cuda()
 
         ### Decode logic
@@ -725,7 +728,7 @@ class VAEShell():
                 batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                 mols_data = batch_data[:,:-1]
                 props_data = batch_data[:,-1]
-                if self.use_gpu:
+                if 'gpu' in self.params['HARDWARE']:
                     mols_data = mols_data.cuda()
                     props_data = props_data.cuda()
 
@@ -773,10 +776,10 @@ class ConvBottleneck(nn.Module):
         for i in range(3):
             out_d = int((in_d - 64) // 2 + 64)
             if first:
-                kernel_size = 9
+                kernel_size = 3 #OG_9
                 first = False
             else:
-                kernel_size = 8
+                kernel_size = 3 #OG_8
             if i == 2:
                 out_d = self.out_channels
             conv_layers.append(nn.Sequential(nn.Conv1d(in_d, out_d, kernel_size), nn.MaxPool1d(kernel_size=2)))

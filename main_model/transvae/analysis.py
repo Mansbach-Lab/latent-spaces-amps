@@ -84,7 +84,7 @@ def plot_loss_by_type(path, colors=None):
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.ylabel('Loss', rotation='horizontal')
     plt.xlabel('epoch')
     plt.title(path.split('/')[-1].split('log_GRUGRU_')[-1].split('.')[0])

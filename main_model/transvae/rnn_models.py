@@ -14,8 +14,8 @@ from transvae.trans_models import VAEShell, Generator, ConvBottleneck, DeconvBot
 
 import torch.distributed as dist
 import torch.utils.data.distributed
+from transvae.DDP import *
 
-import os
 
 # https://pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html
 # Attention architectures inspired by the ^^^ implementation
@@ -74,7 +74,10 @@ class RNNAttn(VAEShell):
 
         ### Build model architecture
         if load_fn is None:
-            self.build_model()
+            if self.params['DDP']:
+                DDP_init(self)
+            else:
+                self.build_model()
         else:
             self.load(load_fn)
 
@@ -83,7 +86,7 @@ class RNNAttn(VAEShell):
         Build model architecture. This function is called during initialization as well as when
         loading a saved model checkpoint
         """
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if 'gpu' in self.params['HARDWARE'] else "cpu")
         encoder = RNNAttnEncoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
                                  self.params['dropout'], self.src_len, self.params['bypass_attention'],
                                  self.params['bypass_bottleneck'], self.device)
@@ -103,8 +106,8 @@ class RNNAttn(VAEShell):
         for p in self.model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        self.use_gpu = torch.cuda.is_available()
-        if self.use_gpu:
+        
+        if 'gpu' in self.params['HARDWARE']:
             self.model.cuda()
             self.params['CHAR_WEIGHTS'] = self.params['CHAR_WEIGHTS'].cuda()
 
@@ -140,44 +143,11 @@ class RNN(VAEShell):
         self.params['depth_pp'] = depth_pp
         self.arch_params = ['N', 'd_model', 'd_latent', 'dropout', 'teacher_force', 'bypass_bottleneck',
                             'property_predictor', 'd_pp', 'depth_pp']
-
+        
         ### Build model architecture
         if load_fn is None:
             if self.params['DDP']:
-                ### prepare distributed data parallel (added by Samuel Renaud)
-                os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
-                ngpus_per_node = torch.cuda.device_count()
-                
-                """ This next line is the key to getting DistributedDataParallel working on SLURM:
-                    SLURM_NODEID is 0 or 1 in this example, SLURM_LOCALID is the id of the 
-                    current process inside a node and is also 0 or 1 in this example."""
-                local_rank = int(os.environ.get("SLURM_LOCALID")) 
-                rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
-
-                """ This next block parses CUDA_VISIBLE_DEVICES to find out which GPUs have been allocated to the job, then sets torch.device to the GPU corresponding       to the local rank (local rank 0 gets the first GPU, local rank 1 gets the second GPU etc) """
-                available_gpus = list(os.environ.get('CUDA_VISIBLE_DEVICES').replace(',',""))
-                current_device = int(available_gpus[local_rank])
-                torch.cuda.set_device(current_device)
-                
-                self.build_model()
-
-                """ this block initializes a process group and initiate communications
-                        between all processes running on all nodes """
-                #print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
-                os.system("echo From Rank: {}, ==> Initializing Process Group...".format(rank))         
-                #init the process group
-                dist.init_process_group(backend=self.params['DIST_BACKEND'], init_method=self.params['INIT_METHOD'],
-                                        world_size=self.params['WORLD_SIZE'], rank=rank)
-                os.system("echo process group ready!")
-                os.system('echo From Rank: {}, ==> Making model..'.format(rank))
-                #print("process group ready!")
-                #print('From Rank: {}, ==> Making model..'.format(rank))
-                os.system("echo final check; ngpus_per_node={},local_rank={},rank={},available_gpus={},current_device={}"
-                          .format(ngpus_per_node,local_rank,rank,available_gpus,current_device))
-                
-                #self.model.cuda()
-
-                self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
+                DDP_init(self)
             else:
                 self.build_model()
         else:
@@ -188,7 +158,7 @@ class RNN(VAEShell):
         Build model architecture. This function is called during initialization as well as when
         loading a saved model checkpoint
         """
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cuda" if 'gpu' in self.params['HARDWARE'] else "cpu")
         encoder = RNNEncoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
                              self.params['dropout'], self.params['bypass_bottleneck'], self.device)
         decoder = RNNDecoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
@@ -207,8 +177,7 @@ class RNN(VAEShell):
         for p in self.model.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
-        self.use_gpu = torch.cuda.is_available()
-        if self.use_gpu:
+        if 'gpu' in self.params['HARDWARE']:
             self.model.cuda()
             self.params['CHAR_WEIGHTS'] = self.params['CHAR_WEIGHTS'].cuda()
 
