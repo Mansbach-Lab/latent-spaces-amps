@@ -120,7 +120,7 @@ class VAEShell():
             checkpoint_path (str, required): Path to saved .ckpt file
         """
         if 'HARDWARE' not in self.params.keys():
-            self.params['HARDWARE'] = 'gpu'
+            self.params['HARDWARE'] = 'cpu'
         if self.params['DDP']:
             map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
             loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
@@ -776,10 +776,10 @@ class ConvBottleneck(nn.Module):
         for i in range(3):
             out_d = int((in_d - 64) // 2 + 64)
             if first:
-                kernel_size = 3 #OG_9
+                kernel_size = 9 #OG_9
                 first = False
             else:
-                kernel_size = 3 #OG_8
+                kernel_size = 8 #OG_8
             if i == 2:
                 out_d = self.out_channels
             conv_layers.append(nn.Sequential(nn.Conv1d(in_d, out_d, kernel_size), nn.MaxPool1d(kernel_size=2)))
