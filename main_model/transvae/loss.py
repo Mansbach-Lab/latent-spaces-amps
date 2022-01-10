@@ -44,7 +44,7 @@ def trans_vae_loss(x, x_out, mu, logvar, true_len, pred_len, true_prop, pred_pro
         KLD = torch.tensor(0.)
     return BCEmol + BCEmask + KLD + bce_prop, BCEmol, BCEmask, KLD, bce_prop
 
-def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_codes, disc_out, opt, train_test, beta=1):
+def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_codes, opt, train_test, beta=1):
     #formatting x
     x = x.long()[:,1:] - 1 
     x = x.contiguous().view(-1) 
@@ -53,44 +53,37 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     #generator and autoencoder loss
     opt.g_opt.zero_grad() #zeroing gradients
     BCE = F.cross_entropy(x_out, x, reduction='mean', weight=weights) #autoencoder loss
-
     if 'gpu' in self.params['HARDWARE']:
         valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False).cuda() #valid
     else:
         valid_discriminator_targets =  Variable(torch.ones(latent_codes.shape[0], 1), requires_grad=False) #valid
         
-    generator_loss = F.binary_cross_entropy_with_logits(disc_out, valid_discriminator_targets) #discriminator loss vs. valid
+    generator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes),
+                                                        valid_discriminator_targets) #discriminator loss vs. valid
     auto_and_gen_loss = BCE + generator_loss
 
-    if 'train' in train_test:
-        auto_and_gen_loss.backward() #backpropagating
-        opt.g_opt.step()
+#     if 'train' in train_test:
+#         auto_and_gen_loss.backward() #backpropagating
+        
+        
     #discriminator loss
     opt.d_opt.zero_grad()#zeroing gradients
     if 'gpu' in self.params['HARDWARE']:
         fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ).cuda() #fake
     else:
         fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ) #fake
-    if "module" in dir(self.model): #for ddp which has a "module" term attached to model
-        disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.module.discriminator(latent_codes.detach()),
-                                                                 fake_discriminator_targets) 
-    else: 
-        disc_generator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()),
+    
+    disc_generator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()),
                                                                  fake_discriminator_targets) 
     if 'gpu' in self.params['HARDWARE']:
         discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ).cuda() #valid
     else:
         discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ) #valid
-    if "module" in dir(self.model):
-        discriminator_loss = F.binary_cross_entropy_with_logits(self.model.module.discriminator(latent_codes.detach()),
-                                                                discriminator_targets)
-    else:
-        discriminator_loss = F.binary_cross_entropy_with_logits(self.model.discriminator(latent_codes.detach()), discriminator_targets)
+    
+    discriminator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()), discriminator_targets)
         
-    disc_loss = 0.5*disc_generator_loss + 0.5*discriminator_loss
-    if 'train' in train_test:
-        disc_loss.backward() #backpropagating
-        opt.d_opt.step() 
+    disc_loss = (0.5*disc_generator_loss + 0.5*discriminator_loss) + (auto_and_gen_loss)
+    
     if pred_prop is not None:
         if "decision_tree" in self.params["type_pp"]:
             print(pred_prop)
@@ -98,6 +91,20 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
             bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
         bce_prop = torch.tensor(0.)
+        
+    total_loss = disc_loss + bce_prop
+    
+    if 'train' in train_test:
+        total_loss.backward() #backpropagating
+        
+#         for name, param in self.named_parameters():
+#             if param.grad is None:
+#                 print(name)
+        
+        opt.g_opt.step()
+        opt.d_opt.step() 
+    
+    
     return auto_and_gen_loss, BCE, torch.tensor(0.), bce_prop, disc_loss
 
 def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, self, beta=1):

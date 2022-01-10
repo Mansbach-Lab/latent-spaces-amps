@@ -9,6 +9,7 @@ import math, copy, time
 from torch.autograd import Variable
 
 from transvae.tvae_util import *
+from transvae import loss
 from transvae.opt import NoamOpt, AdamOpt, AAEOpt
 from transvae.trans_models import VAEShell, Generator, ConvBottleneck, DeconvBottleneck, PropertyPredictor, Embeddings, LayerNorm
 
@@ -120,22 +121,27 @@ class RNNEncoderDecoder(nn.Module):
         self.generator = generator
         self.property_predictor = property_predictor
 
-    def forward(self, src, tgt, true_prop, src_mask=None, tgt_mask=None):
+    def forward(self, src, tgt, true_prop, weights, beta, optimizer, train_test, src_mask=None, tgt_mask=None):
         mem, mu, logvar = self.encode(src) # the mem is the latent space from the encoder
         x, h = self.decode(tgt, mem)
-        discriminator_outputs = self.discriminator(mem)  #added the discriminator here
         x = self.generator(x)
         if self.property_predictor is not None:
             prop = self.predict_property(mem, true_prop) # the vae bottleneck is bypassed so the "mem" is storing the latent memory
         else:
             prop = None
-        return x, mu, logvar, prop, discriminator_outputs, mem
+        tot_loss, bce, kld, prop_bce, disc_loss = loss.aae_loss(src, x, mu, logvar,
+                                                                  true_prop, prop,
+                                                                  weights,
+                                                                  self, mem, optimizer, train_test, beta)
+        
+        
+        return tot_loss, bce, kld, prop_bce, disc_loss #since the loss is already computed the outputs are the loss outputs
 
     def encode(self, src):
         return self.encoder(self.src_embed(src))
 
     def decode(self, tgt, mem):
-        return self.decoder(self.src_embed(tgt), mem)
+        return self.decoder(self.tgt_embed(tgt), mem)
 
     def predict_property(self, mem, true_prop):
         return self.property_predictor(mem, true_prop)
@@ -153,8 +159,9 @@ class RNNEncoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.size, self.size, num_layers=N, dropout=dropout)
-        self.z_means = nn.Linear(size, d_latent)
-        self.z_var = nn.Linear(size, d_latent)
+        if not bypass_bottleneck:
+            self.z_means = nn.Linear(size, d_latent)
+            self.z_var = nn.Linear(size, d_latent)
         self.norm = LayerNorm(size)
         """AAE does not use the std and logvar but will pass through a linear layer that will match the Moses AAE encoder output"""
         self.linear_bypass = nn.Linear(size, d_latent)
@@ -198,7 +205,8 @@ class RNNDecoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.gru_size, self.size, num_layers=N, dropout=dropout)
-        self.unbottleneck = nn.Linear(d_latent, size)
+        if not self.bypass_bottleneck:
+            self.unbottleneck = nn.Linear(d_latent, size)
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNorm(size)
 
@@ -224,9 +232,6 @@ class RNNDecoder(nn.Module):
     def initH(self, batch_size):
         return torch.zeros(self.n_layers, batch_size, self.size, device=self.device)
     
-"""
-Because of the complexity of the interactions between the outer pipelines and the models I think it would just be easier to implement the AAE here myself by adding to the existing RNN architecture and removing the unnecessary things
-"""
 
 class Discriminator(nn.Module):
     def __init__(self, input_size, layers):

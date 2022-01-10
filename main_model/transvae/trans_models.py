@@ -296,11 +296,12 @@ class VAEShell():
                         avg_bcemask_losses.append(bce_mask.item())
                         
                     if self.model_type == 'aae': #the aae loss takes the discriminator output, latent space and optimizer as input
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
-                        loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,'train', beta)
+                        loss, bce, kld, prop_bce, disc_loss = self.model(src, tgt, true_prop,self.params['CHAR_WEIGHTS'], beta,
+                                                                              self.optimizer, 'train', src_mask, tgt_mask)
+#                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
+#                                                                   true_prop, pred_prop,
+#                                                                   self.params['CHAR_WEIGHTS'],
+#                                                                   self, latent_mem, self.optimizer,'train', beta)
                         avg_disc_losses.append(disc_loss.item()) #append the disc loss from aae
                         
                     if self.model_type == 'wae': 
@@ -329,7 +330,7 @@ class VAEShell():
                 if not self.model_type == 'aae':
                     self.optimizer.step()
                     disc_loss = 0 
-                self.model.zero_grad()
+                    self.model.zero_grad()
                 stop_run_time = perf_counter()
                 run_time = round(stop_run_time - start_run_time, 5)
                 avg_loss = np.mean(avg_losses)
@@ -402,11 +403,12 @@ class VAEShell():
                         avg_bcemask_losses.append(bce_mask.item())
                         
                     if self.model_type == 'aae':
-                        x_out, mu, logvar, pred_prop, disc_out, latent_mem = self.model(src, tgt, true_prop, src_mask, tgt_mask)
-                        loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
-                                                                  true_prop, pred_prop,
-                                                                  self.params['CHAR_WEIGHTS'],
-                                                                  self, latent_mem, disc_out, self.optimizer,'test', beta)
+                        loss, bce, kld, prop_bce, disc_loss = self.model(src, tgt, true_prop,self.params['CHAR_WEIGHTS'], beta,
+                                                                         self.optimizer, 'test', src_mask, tgt_mask)
+#                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
+#                                                                   true_prop, pred_prop,
+#                                                                   self.params['CHAR_WEIGHTS'],
+#                                                                   self, latent_mem, disc_out, self.optimizer,'test', beta)
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
                     if self.model_type == 'wae': 
