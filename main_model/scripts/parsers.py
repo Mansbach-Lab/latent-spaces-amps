@@ -69,7 +69,7 @@ def train_parser():
     parser.add_argument('--type_property_predictor', choices=['decision_tree', 'deep_net'], default='deep_net', type=str)
     parser.add_argument('--hardware', choices=['cpu', 'gpu'], required=True, type=str)
     ### Hyperparameters
-    parser.add_argument('--batch_size', default=200, type=int)
+    parser.add_argument('--batch_size', default=50, type=int)
     parser.add_argument('--batch_chunks', default=1, type=int)
     parser.add_argument('--beta', default=0.05, type=float)
     parser.add_argument('--beta_init', default=1e-8, type=float)

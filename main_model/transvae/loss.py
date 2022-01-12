@@ -60,11 +60,20 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
         
     generator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes),
                                                         valid_discriminator_targets) #discriminator loss vs. valid
-    auto_and_gen_loss = BCE + generator_loss
+    
+    if pred_prop is not None:
+        if "decision_tree" in self.params["type_pp"]:
+            print(pred_prop)
+        else: 
+            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
+    else:
+        bce_prop = torch.tensor(0.)
+    
+    auto_and_gen_loss = BCE + generator_loss + bce_prop
 
-#     if 'train' in train_test:
-#         auto_and_gen_loss.backward() #backpropagating
-        
+    if 'train' in train_test:
+        auto_and_gen_loss.backward() #backpropagating generator
+        opt.g_opt.step()
         
     #discriminator loss
     opt.d_opt.zero_grad()#zeroing gradients
@@ -82,26 +91,12 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     
     discriminator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()), discriminator_targets)
         
-    disc_loss = (0.5*disc_generator_loss + 0.5*discriminator_loss) + (auto_and_gen_loss)
-    
-    if pred_prop is not None:
-        if "decision_tree" in self.params["type_pp"]:
-            print(pred_prop)
-        else: 
-            bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
-    else:
-        bce_prop = torch.tensor(0.)
+    disc_loss = 0.5*disc_generator_loss + 0.5*discriminator_loss
         
-    total_loss = disc_loss + bce_prop
+    total_loss = disc_loss
     
     if 'train' in train_test:
         total_loss.backward() #backpropagating
-        
-#         for name, param in self.named_parameters():
-#             if param.grad is None:
-#                 print(name)
-        
-        opt.g_opt.step()
         opt.d_opt.step() 
     
     

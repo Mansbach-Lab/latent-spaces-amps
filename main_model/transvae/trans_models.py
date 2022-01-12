@@ -295,13 +295,10 @@ class VAEShell():
                                                                             beta)
                         avg_bcemask_losses.append(bce_mask.item())
                         
-                    if self.model_type == 'aae': #the aae loss takes the discriminator output, latent space and optimizer as input
+                    if self.model_type == 'aae': #the aae loss is calculated in the forward function due to the 2 backward passes
                         loss, bce, kld, prop_bce, disc_loss = self.model(src, tgt, true_prop,self.params['CHAR_WEIGHTS'], beta,
                                                                               self.optimizer, 'train', src_mask, tgt_mask)
-#                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
-#                                                                   true_prop, pred_prop,
-#                                                                   self.params['CHAR_WEIGHTS'],
-#                                                                   self, latent_mem, self.optimizer,'train', beta)
+                        
                         avg_disc_losses.append(disc_loss.item()) #append the disc loss from aae
                         
                     if self.model_type == 'wae': 
@@ -313,7 +310,7 @@ class VAEShell():
                                                                   beta)
                         avg_mmd_losses.append(mmd_loss.item()) #append the mmd loss from wae
                         
-                    if self.model_type == 'rnn' or self.model_type =='rnnattn':
+                    if self.model_type == 'rnn' or self.model_type =='rnn_attn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
                         loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
@@ -405,10 +402,7 @@ class VAEShell():
                     if self.model_type == 'aae':
                         loss, bce, kld, prop_bce, disc_loss = self.model(src, tgt, true_prop,self.params['CHAR_WEIGHTS'], beta,
                                                                          self.optimizer, 'test', src_mask, tgt_mask)
-#                         loss, bce, kld, prop_bce, disc_loss = aae_loss(src, x_out, mu, logvar,
-#                                                                   true_prop, pred_prop,
-#                                                                   self.params['CHAR_WEIGHTS'],
-#                                                                   self, latent_mem, disc_out, self.optimizer,'test', beta)
+                 
                         avg_disc_losses.append(disc_loss.item()) #added the disc loss from aae
                         
                     if self.model_type == 'wae': 

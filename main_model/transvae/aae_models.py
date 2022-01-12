@@ -159,9 +159,6 @@ class RNNEncoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.size, self.size, num_layers=N, dropout=dropout)
-        if not bypass_bottleneck:
-            self.z_means = nn.Linear(size, d_latent)
-            self.z_var = nn.Linear(size, d_latent)
         self.norm = LayerNorm(size)
         """AAE does not use the std and logvar but will pass through a linear layer that will match the Moses AAE encoder output"""
         self.linear_bypass = nn.Linear(size, d_latent)
@@ -205,8 +202,6 @@ class RNNDecoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.gru_size, self.size, num_layers=N, dropout=dropout)
-        if not self.bypass_bottleneck:
-            self.unbottleneck = nn.Linear(d_latent, size)
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNorm(size)
 

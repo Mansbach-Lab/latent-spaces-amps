@@ -126,7 +126,7 @@ class RNNEncoderDecoder(nn.Module):
         return self.encoder(self.src_embed(src))
 
     def decode(self, tgt, mem):
-        return self.decoder(self.src_embed(tgt), mem)
+        return self.decoder(self.tgt_embed(tgt), mem)
 
     def predict_property(self, mem, true_prop):
         return self.property_predictor(mem, true_prop)
@@ -143,8 +143,6 @@ class RNNEncoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.size, self.size, num_layers=N, dropout=dropout)
-        self.z_means = nn.Linear(size, d_latent)
-        self.z_var = nn.Linear(size, d_latent)
         self.norm = LayerNorm(size)
         """WAE does not use the std and logvar but will pass through a linear layer in the latent space"""
         self.linear_bypass = nn.Linear(size, d_latent)
@@ -188,7 +186,6 @@ class RNNDecoder(nn.Module):
         self.device = device
 
         self.gru = nn.GRU(self.gru_size, self.size, num_layers=N, dropout=dropout)
-        self.unbottleneck = nn.Linear(d_latent, size)
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNorm(size)
 

@@ -92,7 +92,7 @@ class RNNAttn(VAEShell):
                                  self.params['bypass_bottleneck'], self.device)
         decoder = RNNAttnDecoder(self.params['d_model'], self.params['d_latent'], self.params['N'],
                                  self.params['dropout'], self.params['teacher_force'], self.params['bypass_bottleneck'],
-                                 self.device)
+                                 self.device,  encoder.conv_bottleneck.conv_list, self.src_len)
         generator = Generator(self.params['d_model'], self.vocab_size)
         src_embed = Embeddings(self.params['d_model'], self.vocab_size)
         tgt_embed = Embeddings(self.params['d_model'], self.vocab_size)
@@ -217,7 +217,7 @@ class RNNEncoderDecoder(nn.Module):
         return self.encoder(self.src_embed(src))
 
     def decode(self, tgt, mem):
-        return self.decoder(self.src_embed(tgt), mem)
+        return self.decoder(self.tgt_embed(tgt), mem)
 
     def predict_property(self, mu, true_prop):
         return self.property_predictor(mu, true_prop)
@@ -237,7 +237,7 @@ class RNNAttnEncoder(nn.Module):
 
         self.gru = nn.GRU(self.size, self.size, num_layers=N, dropout=dropout)
         self.attn = nn.Linear(self.size * 2, self.max_length)
-        self.conv_bottleneck = ConvBottleneck(size)
+        self.conv_bottleneck = ConvBottleneck(size, src_length)
         self.z_means = nn.Linear(576, d_latent)
         self.z_var = nn.Linear(576, d_latent)
         self.dropout = nn.Dropout(p=dropout)
@@ -279,7 +279,7 @@ class RNNAttnDecoder(nn.Module):
     """
     Recurrent decoder with attention architecture
     """
-    def __init__(self, size, d_latent, N, dropout, tf, bypass_bottleneck, device):
+    def __init__(self, size, d_latent, N, dropout, tf, bypass_bottleneck, device, conv_list, src_len):
         super().__init__()
         self.size = size
         self.n_layers = N
@@ -292,7 +292,7 @@ class RNNAttnDecoder(nn.Module):
         self.device = device
 
         self.linear = nn.Linear(d_latent, 576)
-        self.deconv_bottleneck = DeconvBottleneck(size)
+        self.deconv_bottleneck = DeconvBottleneck(size,src_len ,conv_list)
         self.dropout = nn.Dropout(p=dropout)
         self.gru = nn.GRU(self.gru_size, self.size, num_layers=N, dropout=dropout)
         self.norm = LayerNorm(size)
