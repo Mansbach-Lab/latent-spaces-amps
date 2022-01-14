@@ -14,7 +14,6 @@ import torch.utils.data.distributed
 
  ### Build model architecture
 def DDP_init(self):
-    os.environ["TORCH_DISTRIBUTED_DEBUG"] = "INFO"
     ### prepare distributed data parallel (added by Samuel Renaud)
     os.system("echo GPUs per node: {}".format(torch.cuda.device_count()))
     print("echo GPUs per node: {}".format(torch.cuda.device_count()))
@@ -64,6 +63,6 @@ def DDP_init(self):
               .format(ngpus_per_node,local_rank,rank,available_gpus,current_device))
 
 
-    self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device], find_unused_parameters=True)
+    self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[current_device])
     print('passed distributed data parallel call')
          
