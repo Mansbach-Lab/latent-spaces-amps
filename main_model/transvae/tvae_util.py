@@ -212,7 +212,7 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
 
 def calc_property_accuracies(pred_props, true_props, MCC=False):
     import math
-    binary_predictions = np.round(pred_props) #round the output float from the network to either 0 or 1
+    binary_predictions = torch.round(pred_props) #round the output float from the network to either 0 or 1
     TN = 0
     TP = 0
     FP = 0

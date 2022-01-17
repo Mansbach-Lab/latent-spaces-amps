@@ -29,6 +29,8 @@ class VAEShell():
         self.params = params
         self.name = name
         ###Taking care of un-initialized hyper-params
+        if 'HARDWARE' not in self.params.keys():
+            self.params['HARDWARE'] = 'gpu'
         if 'BATCH_SIZE' not in self.params.keys():
             self.params['BATCH_SIZE'] = 500
         if 'BATCH_CHUNKS' not in self.params.keys():
@@ -67,7 +69,6 @@ class VAEShell():
             self.params['DDP'] = False
         self.loss_func = vae_loss
         self.data_gen = vae_data_gen
-        print(self.params)
         ### Sequence length hard-coded into model
         self.src_len = 126
         self.tgt_len = 125
@@ -119,13 +120,14 @@ class VAEShell():
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
-        if 'HARDWARE' not in self.params.keys():
-            self.params['HARDWARE'] = 'cpu'
+            
         if self.params['DDP']:
             map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
             loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
             
-        else:
+        elif 'gpu' in self.params['HARDWARE']:
+            loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cuda'))
+        else: 
             loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.loaded_from = checkpoint_path
         for k in self.current_state.keys():
@@ -152,7 +154,7 @@ class VAEShell():
         state_dict = self.current_state['model_state_dict']
         
         # Necessary code to remove additional 'module' string attached to 'dict_items' by DDP model
-        print(list(state_dict)[0])
+        #print(list(state_dict)[0])
         if 'module' in list(state_dict)[0]:
             from collections import OrderedDict
             new_state_dict = OrderedDict()
@@ -599,7 +601,7 @@ class VAEShell():
 
             self.model.eval()
             decoded_smiles = []
-            mems = torch.empty((data.shape[0], self.params['d_latent'])).cpu()
+            mems = torch.empty((data.shape[0], self.params['d_latent']))
             for j, data in enumerate(data_iter):
                 if log:
                     log_file = open('calcs/{}_progress.txt'.format(self.name), 'a')
@@ -608,11 +610,12 @@ class VAEShell():
                 for i in range(self.params['BATCH_CHUNKS']):
                     batch_data = data[i*self.chunk_size:(i+1)*self.chunk_size,:]
                     mols_data = batch_data[:,:-1]
-                    if 'gpu' in self.params['HARDWARE']:
-                        batch_data = batch_data.cuda()
-
                     src = Variable(mols_data).long()
                     src_mask = (src != self.pad_idx).unsqueeze(-2)
+                    if 'gpu' in self.params['HARDWARE']:
+                        src = src.cuda()
+                        src_mask = src_mask.cuda()
+                    print(self.device)
                     ### Run through encoder to get memory
                     if self.model_type == 'transformer':
                         with torch.no_grad():
