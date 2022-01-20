@@ -161,7 +161,7 @@ class VAEEncoder(nn.Module):
         self.z_means, self.z_var = nn.Linear(self.flat_conv_out, d_latent), nn.Linear(self.flat_conv_out, d_latent)
         self.norm = LayerNorm(layer.size)
         self.predict_len1 = nn.Linear(d_latent, d_latent*2)
-        self.predict_len2 = nn.Linear(d_latent*2, d_latent)
+        self.predict_len2 = nn.Linear(d_latent*2, layer.size)
         self.d_latent = d_latent
         self.bypass_bottleneck = bypass_bottleneck
         self.eps_scale = eps_scale
