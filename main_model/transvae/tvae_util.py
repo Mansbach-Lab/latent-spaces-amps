@@ -220,16 +220,13 @@ def calc_property_accuracies(pred_props, true_props, MCC=False):
     for idx, prop in enumerate(binary_predictions):
         if true_props[idx] == 0 and prop == true_props[idx]:
             TN += 1
-            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "True Negative")
         if true_props[idx] == 1 and prop == true_props[idx]:
             TP += 1
-            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "True Positive") 
         if true_props[idx] == 0 and prop != true_props[idx]:
             FP += 1
-            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "False Positive")
         if true_props[idx] == 1 and prop != true_props[idx]:
             FN += 1
-            #print(idx,"prediction: ", prop,"true_prop: ", true_props[idx], "False Negative")
+
     acc = (TN + TP) / (TN+TP+FP+FN)
     print("property accuracy :",(TN + TP),"/",(TN+TP+FP+FN),"=",(TN + TP) / (TN+TP+FP+FN) )
     if MCC:
@@ -238,9 +235,9 @@ def calc_property_accuracies(pred_props, true_props, MCC=False):
         P = (TP + FP) / N
         if S!=1 and P!=1:
             MCC = ( (TP/N)-(S*P) )/ math.sqrt(P*S*(1-S)*(1-P))
-        else: MCC="Data error"
+        else: MCC="Data error Division by zero"
         print("MCC: ", MCC)
-    return
+    return acc, MCC
    
 
 def calc_entropy(sample):

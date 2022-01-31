@@ -32,33 +32,31 @@ def plot_test_train_curves(paths, target_path=None, loss_type='tot_loss', data_t
 
     for i, path in enumerate(paths):
         df = pd.read_csv(path)
-        try:
-            data = df[df.data_type == data_type].groupby('epoch').mean()[loss_type]
-        except KeyError:
-            data = df[df.data_type == data_type].groupby('epoch').mean()['bce_loss']
+        print(df.head(10))
+        train_data = df[df.data_type == 'train_loss'].groupby('epoch').mean()[loss_type]
+        print(df.head(10))
+        test_data = df[df.data_type == 'test_loss'].groupby('epoch').mean()[loss_type]
+        print(test_data)
         if loss_type == 'kld_loss':
-            klannealer = KLAnnealer(1e-8, 0.05, 1000, 0)
+            klannealer = KLAnnealer(1e-8, 0.05, 2000, 0)
             klanneal = []
-            for j in range(1000):
+            for j in range(2000):
                 klanneal.append(klannealer(j))
-            data /= klanneal
-        plt.plot(data, c=colors[i], lw=2.5, label=labels[i], alpha=0.95)
-    if target_path is not None:
-        df = pd.read_csv(target_path)
-        try:
-            target = df[df.data_type == data_type].groupby('epoch').mean()[loss_type]
-        except KeyError:
-            target = df[df.data_type == data_type].groupby('epoch').mean()['bce_loss']
-        plt.plot(target, c='black', ls=':', lw=2.5, label='Approximate Goal')
+            train_data /= 1
+            test_data /= 1
+        plt.plot(train_data, c=colors[i], lw=2.5, label=labels[i], alpha=0.95)
+        #plt.plot(test_data, c=colors[i], lw=2.5, label=labels[i], alpha=0.95)
+        
+        
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     plt.yscale('log')
-    plt.ylabel(loss_type, rotation='horizontal', labelpad=30)
+    #plt.ylabel(loss_type, rotation='horizontal', labelpad=30)
     plt.xlabel('epoch')
     return plt
 
-def plot_loss_by_type(path, colors=None):
+def plot_loss_by_type(path ,loss_types=['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss'], colors=None):
     """
     Plot the training curve of one model for each loss type
 
@@ -67,15 +65,15 @@ def plot_loss_by_type(path, colors=None):
         colors (list): Colors for each loss type
     """
     if colors is None:
-        colors = ['#005073', '#B86953', '#932191', '#90041F', '#0F4935']
+        colors = ['#008080', '#B86953', '#932191', '#90041F', '#0F4935']
 
     df = pd.read_csv(path)
 
     plt.figure(figsize=(10,8))
     ax = plt.subplot(111)
     start_pt = 0 #start the graph at a custom index
-    
-    loss_types = ['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss']
+    if None in loss_types:
+        loss_types = ['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss']
     for i, loss_type in enumerate(loss_types):
         train_data = df[df.data_type == 'train'].groupby('epoch').mean()[loss_type]
         test_data = df[df.data_type == 'test'].groupby('epoch').mean()[loss_type]

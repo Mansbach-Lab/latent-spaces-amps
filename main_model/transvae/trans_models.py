@@ -550,6 +550,7 @@ class VAEShell():
 
         self.model.eval()
         for i in range(max_len):
+            if i%10==0: print("decoding sequences of max length ",max_len,"current position: ",i)
             if self.model_type == 'transformer':
                 decode_mask = Variable(subsequent_mask(decoded.size(1)).long())
                 if 'gpu' in self.params['HARDWARE']:
