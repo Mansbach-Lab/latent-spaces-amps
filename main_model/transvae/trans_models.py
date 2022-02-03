@@ -601,7 +601,8 @@ class VAEShell():
             self.chunk_size = self.batch_size // self.params['BATCH_CHUNKS']
 
             self.model.eval()
-            decoded_smiles = []
+            decoded_sequences = []
+            decoded_properties = torch.empty((data.shape[0],1))
             mems = torch.empty((data.shape[0], self.params['d_latent']))
             for j, data in enumerate(data_iter):
                 if log:
@@ -619,24 +620,21 @@ class VAEShell():
                     print(self.device)
                     ### Run through encoder to get memory
                     if self.model_type == 'transformer':
-                        with torch.no_grad():
-                            _, mem, _, _ = self.model.encode(src, src_mask)
+                        _, mem, _, _ = self.model.encode(src, src_mask)
                     elif self.model_type == 'aae': #For both aae and wae the latent memory is not "mu" as it is in vae's case
-                        with torch.no_grad():
-                            mem, _, _ = self.model.encode(src)
+                        mem, _, _ = self.model.encode(src)
                     elif self.model_type == 'wae':
-                        with torch.no_grad():
-                            mem, _, _ = self.model.encode(src)
+                        mem, _, _ = self.model.encode(src)
                     else:
-                        with torch.no_grad():
-                            _, mem, _ = self.model.encode(src)                           
+                        _, mem, _ = self.model.encode(src)                           
                     if "ON" in self.params['property_predictor']:
                         props = self.model.predict_property(mem, torch.tensor(0.))
-                        
+                    ### grab the batch outputs and store them   
                     start = j*self.batch_size+i*self.chunk_size
                     stop = j*self.batch_size+(i+1)*self.chunk_size
+                    decoded_properties[start:stop] = props
                     mems[start:stop, :] = mem.detach().cpu()
-
+                    
                     ### Decode logic
                     if method == 'greedy':
                         decoded = self.greedy_decode(mem, src_mask=src_mask)
@@ -645,14 +643,14 @@ class VAEShell():
 
                     if return_str:
                         decoded = decode_mols(decoded, self.params['ORG_DICT'])
-                        decoded_smiles += decoded
+                        decoded_sequences += decoded
                     else:
-                        decoded_smiles.append(decoded)
+                        decoded_sequences.append(decoded)
 
             if return_mems:
-                return decoded_smiles, props, mems.detach().numpy()
+                return decoded_sequences, decoded_properties, mems.detach().numpy()
             else:
-                return decoded_smiles, props
+                return decoded_sequences, decoded_properties
 
     def sample(self, n, method='greedy', sample_mode='rand',
                         sample_dims=None, k=None, return_str=True):
