@@ -30,7 +30,7 @@ class VAEShell():
         self.name = name
         ###Taking care of un-initialized hyper-params
         if 'HARDWARE' not in self.params.keys():
-            self.params['HARDWARE'] = 'cpu'
+            self.params['HARDWARE'] = 'gpu'
         if 'BATCH_SIZE' not in self.params.keys():
             self.params['BATCH_SIZE'] = 500
         if 'BATCH_CHUNKS' not in self.params.keys():
