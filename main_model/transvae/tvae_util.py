@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 
 from scipy.stats import entropy
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.metrics import precision_score, classification_report
 
 import torch
 import torch.nn as nn
@@ -185,17 +186,17 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
     input and reconstructed sequences"
     max_len = 126
     seq_accs = []
-    hits = 0
-    misses = 0
-    position_accs = np.zeros((2, max_len))
+    hits = 0 #used by token acc only
+    misses = 0 #used by token acc only
+    position_accs = np.zeros((2, max_len)) #used by pos acc only
     for in_seq, out_seq in zip(input_sequences, output_sequences):
         if in_seq == out_seq:
             seq_accs.append(1)
         else:
             seq_accs.append(0)
 
-        misses += abs(len(in_seq) - len(out_seq))
-        for j, (token_in, token_out) in enumerate(zip(in_seq, out_seq)):
+        misses += abs(len(in_seq) - len(out_seq)) #number of missed tokens in the prediction seq
+        for j, (token_in, token_out) in enumerate(zip(in_seq, out_seq)): #look at individual tokens for current seq
             if token_in == token_out:
                 hits += 1
                 position_accs[0,j] += 1
@@ -203,15 +204,23 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
                 misses += 1
             position_accs[1,j] += 1
 
-    seq_acc = np.mean(seq_accs)
+    seq_acc = np.mean(seq_accs) #list of 1's and 0's for correct or incorrect complete seq predictions
+    
     token_acc = hits / (hits + misses)
     position_acc = []
+    position_conf = []
+    #calculating the confidence interval of the accuracy results
+    z=1.96 #95% confidence interval
     for i in range(max_len):
         position_acc.append(position_accs[0,i] / position_accs[1,i])
-    return seq_acc, token_acc, position_acc
+        position_conf.append(z*math.sqrt(position_acc[i]*(1-position_acc[i])/position_accs[1,i]))
+    
+    seq_conf = z*math.sqrt(seq_acc*(1-seq_acc)/len(seq_accs))
+    token_conf = z*math.sqrt(token_acc*(1-token_acc)/(hits+misses))
+    
+    return seq_acc, token_acc, position_acc, seq_conf, token_conf, position_conf
 
 def calc_property_accuracies(pred_props, true_props, MCC=False):
-    import math
     binary_predictions = torch.round(pred_props) #round the output float from the network to either 0 or 1
     TN = 0
     TP = 0
@@ -228,6 +237,9 @@ def calc_property_accuracies(pred_props, true_props, MCC=False):
             FN += 1
 
     acc = (TN + TP) / (TN+TP+FP+FN)
+    z=1.96 #95% confidence interval
+    conf = z*math.sqrt(acc*(1-acc)/(TN+TP+FP+FN))
+    
     print("property accuracy :",(TN + TP),"/",(TN+TP+FP+FN),"=",(TN + TP) / (TN+TP+FP+FN) )
     if MCC:
         N = TN + TP + FN + FP
@@ -237,15 +249,16 @@ def calc_property_accuracies(pred_props, true_props, MCC=False):
             MCC = ( (TP/N)-(S*P) )/ math.sqrt(P*S*(1-S)*(1-P))
         else: MCC="Data error Division by zero"
         print("MCC: ", MCC)
-    return acc, MCC
+    return acc, conf, MCC
    
 
 def calc_entropy(sample):
     "Calculates Shannon information entropy for a set of input memories"
     es = []
     for i in range(sample.shape[1]):
-        probs, bin_edges = np.histogram(sample[:,i], bins=1000, range=(-5., 5.), density=True)
-        es.append(entropy(probs))
+        probs, bins = np.histogram(sample[:,i], bins=1000, range=(-5, 5), density=True)
+        cur_ent = entropy(probs)
+        es.append(cur_ent)
     return np.array(es)
 
 ####### ADDITIONAL METRIC CALCULATIONS #########
