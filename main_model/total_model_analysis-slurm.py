@@ -127,12 +127,12 @@ for i in range(len(ckpt_list)):
    
 
     #create random index and re-index ordered memory list creating n random sub-lists (ideally resulting in IID random lists)
-    random_idx = np.random.permutation(np.arange(stop=mems.shape[0]))
-    mems[:] = mems[random_idx]
+    random_idx = np.random.permutation(np.arange(stop=mus.shape[0]))
+    mus[:] = mus[random_idx]
     data = data[random_idx]
 
     subsample_start=0
-    subsample_length=mems.shape[0] #this may change depending on batch size
+    subsample_length=mus.shape[0] #this may change depending on batch size
 
     #(for length based coloring): record all peptide lengths iterating through input
     pep_lengths = []
@@ -144,7 +144,7 @@ for i in range(len(ckpt_list)):
     function = function[random_idx] #account for random permutation
 
     pca = PCA(n_components=4)
-    pca_batch =pca.fit_transform(X=mems[:])
+    pca_batch =pca.fit_transform(X=mus[:])
 
     fig = px.scatter_matrix(pca_batch, color= pep_lengths, opacity=0.8)
     fig.write_image(save_dir+'pca_length.png', width=1200, height=800)
@@ -157,8 +157,8 @@ for i in range(len(ckpt_list)):
     pca_func_subsamples = []
     n=35
     for s in range(n):
-        s_len = len(mems)//n #sample lengths
-        mem_func_sil = metrics.silhouette_score(mems[s_len*s:s_len*(s+1)], function[s_len*s:s_len*(s+1)], metric='euclidean')
+        s_len = len(mus)//n #sample lengths
+        mem_func_sil = metrics.silhouette_score(mus[s_len*s:s_len*(s+1)], function[s_len*s:s_len*(s+1)], metric='euclidean')
         latent_mem_func_subsamples.append(mem_func_sil)
         XY = [i for i in zip(pca_batch[s_len*s:s_len*(s+1),0], pca_batch[s_len*s:s_len*(s+1),1])]
         pca_func_sil = metrics.silhouette_score(XY, function[s_len*s:s_len*(s+1)], metric='euclidean')
