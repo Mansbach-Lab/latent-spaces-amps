@@ -72,13 +72,14 @@ def plot_loss_by_type(path ,loss_types=['tot_loss', 'recon_loss', 'kld_loss', 'p
     plt.figure(figsize=(10,8))
     ax = plt.subplot(111)
     start_pt = 0 #start the graph at a custom index
+    end_pt = 1000 # end graph at a custom index
     if None in loss_types:
         loss_types = ['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss']
     for i, loss_type in enumerate(loss_types):
         train_data = df[df.data_type == 'train'].groupby('epoch').mean()[loss_type]
         test_data = df[df.data_type == 'test'].groupby('epoch').mean()[loss_type]
-        plt.plot(train_data[start_pt:], c=colors[i], label='train_'+loss_type)
-        plt.plot(test_data[start_pt:], c=colors[i], label='test_'+loss_type, ls=':')
+        plt.plot(train_data[start_pt:end_pt], c=colors[i], label='train_'+loss_type)
+        plt.plot(test_data[start_pt:end_pt], c=colors[i], label='test_'+loss_type, ls=':')
     box = ax.get_position()
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))

@@ -629,6 +629,7 @@ class VAEShell():
                         _, mem, _ = self.model.encode(src)                           
                     if "ON" in self.params['property_predictor']:
                         props = self.model.predict_property(mem, torch.tensor(0.))
+                    
                     ### grab the batch outputs and store them   
                     start = j*self.batch_size+i*self.chunk_size
                     stop = j*self.batch_size+(i+1)*self.chunk_size
