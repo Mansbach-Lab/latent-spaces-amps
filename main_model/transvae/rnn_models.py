@@ -172,7 +172,7 @@ class RNN(VAEShell):
                                                   self.params['type_pp'])
         else:
             property_predictor = None
-        self.model = RNNEncoderDecoder(encoder, decoder, src_embed, tgt_embed, generator,
+        self.model = RNNEncoderDecoder(encoder, decoder, src_embed,tgt_embed, generator,
                                        property_predictor, self.params)
         for p in self.model.parameters():
             if p.dim() > 1:
@@ -217,7 +217,7 @@ class RNNEncoderDecoder(nn.Module):
         return self.encoder(self.src_embed(src))
 
     def decode(self, tgt, mem):
-        return self.decoder(self.tgt_embed(tgt), mem)
+        return self.decoder(self.tgt_embed(tgt), mem) #change back to src
 
     def predict_property(self, mu, true_prop):
         return self.property_predictor(mu, true_prop)
@@ -343,7 +343,7 @@ class RNNEncoder(nn.Module):
     def forward(self, x):
         h = self.initH(x.shape[0])
         x = x.permute(1, 0, 2)
-        x, h = self.gru(x, h)
+        x, h = self.gru(x)
         mem = self.norm(h[-1,:,:])
         if self.bypass_bottleneck:
             mu, logvar = Variable(torch.tensor([0.0])), Variable(torch.tensor([0.0]))
@@ -388,7 +388,8 @@ class RNNDecoder(nn.Module):
             mem = torch.cat((embedded, mem), dim=2)
         mem = mem.permute(1, 0, 2)
         mem = mem.contiguous()
-        x, h = self.gru(mem, h)
+        x, h = self.gru(mem)
+        
         x = x.permute(1, 0, 2)
         x = self.norm(x)
         return x, h

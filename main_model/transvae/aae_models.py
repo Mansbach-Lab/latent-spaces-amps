@@ -204,7 +204,7 @@ class RNNDecoder(nn.Module):
         self.gru = nn.GRU(self.gru_size, self.size, num_layers=N, dropout=dropout)
         self.dropout = nn.Dropout(dropout)
         self.norm = LayerNorm(size)
-        """AAE does not use the std and logvar but will pass through a linear layer that will match the Moses AAE encoder output"""
+        """AAE does not use the std and logvar but will pass through a linear layer"""
         self.linear_bypass = nn.Linear(d_latent, size)
 
     def forward(self, tgt, mem):

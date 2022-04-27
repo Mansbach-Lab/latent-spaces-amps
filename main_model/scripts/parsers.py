@@ -80,7 +80,7 @@ def train_parser():
     parser.add_argument('--eps_scale', default=1, type=float)
     parser.add_argument('--epochs', default=20, type=int)
     ### Data Parameters
-    parser.add_argument('--data_source', choices=['zinc', 'pubchem','peptide','custom'],
+    parser.add_argument('--data_source', choices=['zinc', 'pubchem','peptide','custom','cdd'],
                         required=True, type=str)
     parser.add_argument('--train_mols_path', default=None, type=str)
     parser.add_argument('--test_mols_path', default=None, type=str)

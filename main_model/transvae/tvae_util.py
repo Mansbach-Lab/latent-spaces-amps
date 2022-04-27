@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+import scipy.stats
 from scipy.stats import entropy
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.metrics import precision_score, classification_report
@@ -186,16 +187,10 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
     input and reconstructed sequences"
     max_len = 126
     seq_accs = []
-    short_seq_accs=[]
     hits = 0 #used by token acc only
     misses = 0 #used by token acc only
     position_accs = np.zeros((2, max_len)) #used by pos acc only
     for in_seq, out_seq in zip(input_sequences, output_sequences):
-        if len(in_seq) <14:
-            if in_seq == out_seq:
-                short_seq_accs.append(1)
-            else:
-                short_seq_accs.append(0)
         if in_seq == out_seq:
             seq_accs.append(1)
         else:
@@ -211,7 +206,6 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
             position_accs[1,j] += 1
 
     seq_acc = np.mean(seq_accs) #list of 1's and 0's for correct or incorrect complete seq predictions
-    short_seq_acc = np.mean(short_seq_accs)
     token_acc = hits / (hits + misses)
     position_acc = []
     position_conf = []
@@ -224,7 +218,7 @@ def calc_reconstruction_accuracies(input_sequences, output_sequences):
     seq_conf = z*math.sqrt(seq_acc*(1-seq_acc)/len(seq_accs))
     token_conf = z*math.sqrt(token_acc*(1-token_acc)/(hits+misses))
     
-    return seq_acc, token_acc, position_acc, seq_conf, token_conf, position_conf, short_seq_acc
+    return seq_acc, token_acc, position_acc, seq_conf, token_conf, position_conf
 
 def calc_property_accuracies(pred_props, true_props, MCC=False):
     binary_predictions = torch.round(pred_props) #round the output float from the network to either 0 or 1
@@ -243,6 +237,7 @@ def calc_property_accuracies(pred_props, true_props, MCC=False):
             FN += 1
 
     acc = (TN + TP) / (TN+TP+FP+FN)
+    
     z=1.96 #95% confidence interval
     conf = z*math.sqrt(acc*(1-acc)/(TN+TP+FP+FN))
     

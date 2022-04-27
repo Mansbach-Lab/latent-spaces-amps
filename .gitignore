@@ -1,5 +1,6 @@
 *.csv
 *.smi.gz
+*.fasta
 *.png
 *.pdf
 *.csv.gz

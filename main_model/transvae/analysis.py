@@ -64,15 +64,21 @@ def plot_loss_by_type(path ,loss_types=['tot_loss', 'recon_loss', 'kld_loss', 'p
         path (str, req): Path to log file of trained model
         colors (list): Colors for each loss type
     """
+    plt.rc('font', size=14)          # controls default text sizes
+    plt.rc('axes', titlesize=20)     # fontsize of the axes title
+    plt.rc('axes', labelsize=15)    # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=12)    # fontsize of the tick labels
+    plt.rc('ytick', labelsize=12)    # fontsize of the tick labels
+
     if colors is None:
         colors = ['#008080', '#B86953', '#932191', '#90041F', '#0F4935']
 
     df = pd.read_csv(path)
 
-    plt.figure(figsize=(10,8))
+    plt.figure(figsize=(12,8))
     ax = plt.subplot(111)
     start_pt = 0 #start the graph at a custom index
-    end_pt = 1000 # end graph at a custom index
+    end_pt = 2000 # end graph at a custom index
     if None in loss_types:
         loss_types = ['tot_loss', 'recon_loss', 'kld_loss', 'prop_bce_loss']
     for i, loss_type in enumerate(loss_types):
@@ -84,9 +90,10 @@ def plot_loss_by_type(path ,loss_types=['tot_loss', 'recon_loss', 'kld_loss', 'p
     ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
     #plt.yscale('log')
-    plt.ylabel('Loss', rotation='horizontal')
-    plt.xlabel('epoch')
-    plt.title(path.split('/')[-1].split('log_GRUGRU_')[-1].split('.')[0])
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    #plt.title(path.split('/')[-1].split('log_GRUGRU_')[-1].split('.')[0])
+    plt.title('Train and Test KLD-Loss RNN-32 beta=0.05')
     return plt
 
 def plot_reconstruction_accuracies(dir, colors=None):
