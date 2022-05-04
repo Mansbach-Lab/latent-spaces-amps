@@ -383,6 +383,28 @@ def cross_diversity(set1, set2, bs1=5000, bs2=5000, p=1, agg='max',
     return 1 - np.mean(agg_tanimoto)
 
 
+####### PEPTIDE METRICS #########
+# from sourmash.readthedocs.io/en/latest/kmers-and-minhash.html
+from sklearn.metrics import jaccard_score
+def build_kmers(sequence, ksize):
+    kmers = []
+    n_kmers = len(sequence) - ksize + 1
+
+    for i in range(n_kmers):
+        kmer = sequence[i:i + ksize]
+        kmers.append(kmer)
+        
+    return kmers
+
+def jaccard_similarity(a, b):
+    a = set(a)
+    b = set(b)
+
+    intersection = len(a.intersection(b))
+    union = len(a.union(b))
+
+    return intersection / union
+
 ####### GRADIENT TROUBLESHOOTING #########
 #this needs to be used right after a call to "backwards" has been initiated so that the gradient is there
 

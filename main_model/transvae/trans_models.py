@@ -120,13 +120,13 @@ class VAEShell():
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
-            
-        if self.params['DDP']:
-            map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
-            loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
-            
-        elif 'gpu' in self.params['HARDWARE']:
-            loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cuda'))
+         
+        if 'gpu' in self.params['HARDWARE']:
+            if self.params['DDP']:
+                map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
+                loaded_checkpoint = torch.load(checkpoint_path, map_location=map_location)
+            else:
+                loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cuda'))
         else: 
             loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
         self.loaded_from = checkpoint_path

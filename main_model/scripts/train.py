@@ -14,9 +14,9 @@ from scripts.parsers import model_init, train_parser
 
 def train(args):
     print("train function called /n")
-    ### Update beta init parameter
+    ### Update beta init parameter from loaded chekpoint
     if args.checkpoint is not None:
-        ckpt = torch.load(args.checkpoint, map_location=torch.device('cpu'))
+        ckpt = torch.load(args.checkpoint, map_location=torch.device('cuda'))
         start_epoch = ckpt['epoch']
         total_epochs = start_epoch + args.epochs
         beta_init = (args.beta - args.beta_init) / total_epochs * start_epoch
