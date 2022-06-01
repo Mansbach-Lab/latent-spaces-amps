@@ -517,7 +517,7 @@ class VAEShell():
                     z[:,d] = torch.randn(size)
         return z
 
-    def greedy_decode(self, mem, src_mask=None):
+    def greedy_decode(self, mem, print_step=100 ,src_mask=None):
         """
         Greedy decode from model memory
 
@@ -550,7 +550,7 @@ class VAEShell():
 
         self.model.eval()
         for i in range(max_len):
-            if i%10==0: print("decoding sequences of max length ",max_len,"current position: ",i)
+            if i%print_step==0: print("decoding sequences of max length ",max_len,"current position: ",i)
             if self.model_type == 'transformer':
                 decode_mask = Variable(subsequent_mask(decoded.size(1)).long())
                 if 'gpu' in self.params['HARDWARE']:
