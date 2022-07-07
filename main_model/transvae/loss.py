@@ -68,30 +68,29 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
             bce_prop = F.binary_cross_entropy(pred_prop.squeeze(-1), true_prop)
     else:
         bce_prop = torch.tensor(0.)
-    
     auto_and_gen_loss = BCE + generator_loss + bce_prop
 
     if 'train' in train_test:
         auto_and_gen_loss.backward() #backpropagating generator
         opt.g_opt.step()
         
-    #discriminator loss
+    #discriminator loss: discriminator's ability to classify real from generated samples
     opt.d_opt.zero_grad()#zeroing gradients
     if 'gpu' in self.params['HARDWARE']:
-        fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ).cuda() #fake
+        fake_discriminator_targets = Variable(torch.zeros(latent_codes.shape[0],1), requires_grad=False).cuda() #fake
     else:
-        fake_discriminator_targets = Variable( torch.zeros(latent_codes.shape[0], 1), requires_grad=False ) #fake
+        fake_discriminator_targets = Variable(torch.zeros(latent_codes.shape[0],1), requires_grad=False) #fake
+    fake_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()),fake_discriminator_targets)
     
-    disc_generator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()),
-                                                                 fake_discriminator_targets) 
     if 'gpu' in self.params['HARDWARE']:
-        discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ).cuda() #valid
+        discriminator_targets = Variable(torch.ones(latent_codes.shape[0],1), requires_grad=False).cuda() #valid
+        noise = Variable(torch.Tensor(np.random.normal(0,1,(latent_codes.shape[0],1))), requires_grad=False).cuda() #fake
     else:
-        discriminator_targets = Variable( torch.ones(latent_codes.shape[0], 1), requires_grad=False ) #valid
-    
-    discriminator_loss = F.binary_cross_entropy_with_logits(self.discriminator(latent_codes.detach()), discriminator_targets)
+        discriminator_targets = Variable(torch.ones(latent_codes.shape[0],1), requires_grad=False) #valid
+        noise = Variable(torch.Tensor(np.random.normal(0,1,(latent_codes.shape[0],1))), requires_grad=False) #fake
+    real_loss = F.binary_cross_entropy_with_logits(noise,discriminator_targets)
         
-    disc_loss = 0.5*disc_generator_loss + 0.5*discriminator_loss
+    disc_loss = 0.5*fake_loss + 0.5*real_loss
         
     total_loss = disc_loss
     

@@ -885,7 +885,7 @@ class Embeddings(nn.Module):
         self.d_model = d_model
 
     def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model) #apparently square root might be for the transformer model to keep num's low
+        return self.lut(x) * math.sqrt(self.d_model) #Square root is for the transformer model to keep num's low
 
 class PositionalEncoding(nn.Module):
     "Static sinusoidal positional encoding layer"

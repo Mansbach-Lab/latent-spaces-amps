@@ -57,7 +57,7 @@ def calc_attention(args):
                 batch_data = data[i*chunk_size:(i+1)*chunk_size,:]
                 mols_data = batch_data[:,:-1]
                 props_data = batch_data[:,-1]
-                if vae.use_gpu:
+                if vae.params['HARDWARE']=='gpu':
                     mols_data = mols_data.cuda()
                     props_data = props_data.cuda()
 

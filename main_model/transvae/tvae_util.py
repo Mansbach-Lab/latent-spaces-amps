@@ -262,126 +262,6 @@ def calc_entropy(sample):
         es.append(cur_ent)
     return np.array(es)
 
-####### ADDITIONAL METRIC CALCULATIONS #########
-
-def load_gen(path):
-    "Loads set of generated SMILES strings from path"
-    smiles = pd.read_csv(path).SMILES.to_list()
-    return smiles
-
-def valid(smiles):
-    "Returns valid SMILES (RDKit sanitizable) from a set of\
-    SMILES strings"
-    valid_smiles = []
-    for smi in smiles:
-        mol = Chem.MolFromSmiles(smi)
-        if mol is None:
-            pass
-        else:
-            try:
-                Chem.SanitizeMol(mol)
-                valid_smiles.append(smi)
-            except ValueError:
-                pass
-    return valid_smiles
-
-def calc_token_lengths(smiles):
-    "Calculates the token lengths of a set of SMILES strings"
-    lens = []
-    for smi in smiles:
-        smi = tokenizer(smi)
-        lens.append(len(smi))
-    return lens
-
-def calc_MW(smiles):
-    "Calculates the molecular weights of a set of SMILES strings"
-    MWs = []
-    for smi in smiles:
-        mol = Chem.MolFromSmiles(smi)
-        MWs.append(Descriptors.MolWt(mol))
-    return MWs
-
-def novel(smiles, train_smiles):
-    "Returns novel SMILES strings that do not appear\
-    in training set"
-    set_smiles = set(smiles)
-    set_train = set(train_smiles)
-    novel_smiles = list(set_smiles - set_train)
-    return novel_smiles
-
-def unique(smiles):
-    "Returns unique SMILES strings from set"
-    unique_smiles = set(smiles)
-    return list(unique_smiles)
-
-def fingerprints(smiles):
-    "Calculates fingerprints of a list of SMILES strings"
-    fps = np.zeros((len(smiles), 1024))
-    for i, smi in enumerate(smiles):
-        mol = Chem.MolFromSmiles(smi)
-        fp = np.asarray(Morgan(mol, 2, 1024), dtype='uint8')
-        fps[i,:] = fp
-    return fps
-
-def tanimoto_similarity(bv1, bv2):
-    "Calculates Tanimoto similarity between two fingerprint bit vectors"
-    mand = sum(moses_fp & train_fp)
-    mor = sum(moses_fp | train_fp)
-    return mand / mor
-
-def pass_through_filters(smiles, data_dir='data'):
-    """Filters SMILES strings based on method implemented in
-    http://nlp.seas.harvard.edu/2018/04/03/attention.html"""
-    _mcf = pd.read_csv('{}/mcf.csv'.format(data_dir))
-    _pains = pd.read_csv('{}/wehi_pains.csv'.format(data_dir), names=['smarts', 'names'])
-    _filters = [Chem.MolFromSmarts(x) for x in
-                _mcf.append(_pains, sort=True)['smarts'].values]
-    filtered_smiles = []
-    for smi in smiles:
-        mol = Chem.MolFromSmiles(smi)
-        h_mol = Chem.AddHs(mol)
-        filtered = False
-        if any(atom.GetFormalCharge() != 0 for atom in mol.GetAtoms()):
-            filtered = True
-        if any(h_mol.HasSubstructMatch(smarts) for smarts in _filters):
-            filtered = True
-        if not filtered:
-            filtered_smiles.append(smi)
-    return filtered_smiles
-
-def cross_diversity(set1, set2, bs1=5000, bs2=5000, p=1, agg='max',
-                    device='cpu'):
-    """
-    Function for calculating the maximum average tanimoto similarity score
-    between the generated set and the training set (this code is adapted from
-    https://github.com/molecularsets/moses)
-    """
-    agg_tanimoto = np.zeros(len(set2))
-    total = np.zeros(len(set2))
-    set2 = torch.tensor(set2).to(device).float()
-    for j in range(0, set1.shape[0], bs1):
-        x_stock = torch.tensor(set1[j:j+bs1]).to(device).float()
-        for i in range(0, set2.shape[0], bs2):
-            y_gen = set2[i:i+bs2]
-            y_gen = y_gen.transpose(0, 1)
-            tp = torch.mm(x_stock, y_gen)
-            jac = (tp / (x_stock.sum(1, keepdim=True) +
-                   y_gen.sum(0, keepdim=True) -tp)).cpu().numpy()
-            jac[np.isnan(jac)] = 1
-            if p!= 1:
-                jac = jac**p
-            if agg == 'max':
-                agg_tanimoto[i:i+y_gen.shape[1]] = np.maximum(
-                    agg_tanimoto[i:i+y_gen.shape[1]], jac.max(0))
-            elif agg == 'mean':
-                agg_tanimoto[i:i+y_gen.shape[1]] += jac.sum(0)
-                total[i:i+y_gen.shape[1]] += jac.shape[0]
-    if agg == 'mean':
-        agg_tanimoto /= total
-    if p != 1:
-        agg_tanimoto = (agg_tanimoto)**(1/p)
-    return 1 - np.mean(agg_tanimoto)
-
 
 ####### PEPTIDE METRICS #########
 # from sourmash.readthedocs.io/en/latest/kmers-and-minhash.html
@@ -397,13 +277,60 @@ def build_kmers(sequence, ksize):
     return kmers
 
 def jaccard_similarity(a, b):
-    a = set(a)
-    b = set(b)
+    n_a = set(a)
+    n_b = set(b)
 
-    intersection = len(a.intersection(b))
-    union = len(a.union(b))
-
+    intersection = len(n_a.intersection(n_b))
+    union = len(n_a.union(n_b))
     return intersection / union
+
+def jaccard_similarity_score(seq_list,k=2):
+    import itertools
+    set_1 = list(set(seq_list))
+    combinations = list(itertools.combinations(seq_list,2))
+    jac_scores = np.empty(len(combinations))
+    for idx, combination in enumerate(combinations):
+        if len(combination[0])<=k or len(combination[1])<=k:
+            jac_scores[idx]=0
+        else:
+            jac_scores[idx] = jaccard_similarity(build_kmers(combination[0],k), build_kmers(combination[1],k))
+    return jac_scores
+
+def uniqueness(seq_list):
+    "Returns the % of unique items in a list"
+    z=1.96 #95% confidence interval
+    percent_unique = len(set(seq_list)) / len(seq_list)
+    unique_conf = z*math.sqrt(percent_unique*(1-percent_unique)/len(seq_list))
+    return percent_unique, unique_conf
+    
+def novelty(new_sequences, dataset_sequences):
+    """
+    This function compares two numpy lists of sequences and returns the % of seqs that are novel in the new list
+    new_sequences: newly generated list of sequences
+    dataset_sequences: list of sequences to compare against
+    """
+    z=1.96 #95% confidence interval
+    combined = np.concatenate((new_sequences, dataset_sequences)) #first combine both lists
+    set_combined = set(combined.flatten().tolist()) #remove redundant seqs with "set"
+    percent_novel = (len(set_combined)-len(dataset_sequences)) / (len(new_sequences)) #subtract data seqs and get %
+    novel_conf =  z*math.sqrt(percent_novel*(1-percent_novel)/(len(new_sequences)))
+    return percent_novel, novel_conf
+
+def sequence_similarity(seq_list):
+    import Bio
+    from Bio import pairwise2
+    from Bio.Align import substitution_matrices
+    similarity_score=[]
+    matrix = substitution_matrices.load("BLOSUM62")
+    seq_set = list(set(seq_list))
+    for seq in seq_set[:len(seq_set)//2]: #grab half the list
+        for seq2 in seq_set[len(seq_set)//2:]: #grab other half
+            if len(seq2)==0 or len(seq)==0:
+                similarity_score.append(0)
+            else:
+                similarity_score.append( pairwise2.align.globaldx(seq,seq2, matrix, score_only=True)/(len(seq)+len(seq2)) )
+    return similarity_score
+
 
 ####### GRADIENT TROUBLESHOOTING #########
 #this needs to be used right after a call to "backwards" has been initiated so that the gradient is there
