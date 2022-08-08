@@ -19,9 +19,7 @@ def vae_data_gen(data, max_len=126, name=None, props=None, char_dict=None):
         encoded_data (torch.tensor): Tensor containing encodings for each
                                      SMILES string
     """
-    print(name)
     seq_list = data[:,0] #unpackage the smiles: mols is a list of lists of smiles (lists of characters) 
-    #print(smiles)
     if props is None:
         props = np.zeros(seq_list.shape)
     del data
@@ -35,7 +33,6 @@ def vae_data_gen(data, max_len=126, name=None, props=None, char_dict=None):
         encoded_seq = [0] + encoded_seq
         encoded_data[j,:-1] = torch.tensor(encoded_seq)
         encoded_data[j,-1] = torch.tensor(props[j])
-    #print(encoded_data.shape,encoded_data)
     return encoded_data
 
 def make_std_mask(tgt, pad):

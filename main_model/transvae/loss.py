@@ -69,7 +69,6 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     else:
         bce_prop = torch.tensor(0.)
     auto_and_gen_loss = BCE + generator_loss + bce_prop
-
     if 'train' in train_test:
         auto_and_gen_loss.backward() #backpropagating generator
         opt.g_opt.step()
@@ -97,14 +96,12 @@ def aae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, self, latent_c
     if 'train' in train_test:
         total_loss.backward() #backpropagating
         opt.d_opt.step() 
-    
-    
+   
     return auto_and_gen_loss, BCE, torch.tensor(0.), bce_prop, disc_loss
 
 def wae_loss(x, x_out, mu, logvar, true_prop, pred_prop, weights, latent_codes, self, beta=1):
     "reconstruction and mmd loss"
     #reconstruction loss
-    #print(len(self.model.state_dict()))
     x = x.long()[:,1:] - 1 
     x = x.contiguous().view(-1)
     x_out = x_out.contiguous().view(-1, x_out.size(2)) 

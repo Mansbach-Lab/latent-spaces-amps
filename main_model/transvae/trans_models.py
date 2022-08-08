@@ -28,25 +28,12 @@ class VAEShell():
     def __init__(self, params, name=None):
         self.params = params
         self.name = name
-        ###Taking care of un-initialized hyper-params
+        #Hardware and DDP need to be given before being able to load a model
         if 'HARDWARE' not in self.params.keys():
             self.params['HARDWARE'] = 'gpu'
-        if 'BATCH_SIZE' not in self.params.keys():
-            self.params['BATCH_SIZE'] = 500
-        if 'BATCH_CHUNKS' not in self.params.keys():
-            self.params['BATCH_CHUNKS'] = 1
-        if 'BETA_INIT' not in self.params.keys():
-            self.params['BETA_INIT'] = 1e-8
-        if 'BETA' not in self.params.keys():
-            self.params['BETA'] = 0.05
-        if 'ANNEAL_START' not in self.params.keys():
-            self.params['ANNEAL_START'] = 0
-        if 'LR' not in self.params.keys():
-            self.params['LR_SCALE'] = 1
-        if 'WARMUP_STEPS' not in self.params.keys():
-            self.params['WARMUP_STEPS'] = 10000
-        if 'EPS_SCALE' not in self.params.keys():
-            self.params['EPS_SCALE'] = 1
+        if 'DDP' not in self.params.keys():
+            self.params['DDP'] = False
+        #The character dictionnary is shared for all models
         if 'CHAR_DICT' in self.params.keys():
             self.vocab_size = len(self.params['CHAR_DICT'].keys())
             self.pad_idx = self.params['CHAR_DICT']['_']
@@ -54,21 +41,7 @@ class VAEShell():
                 self.params['CHAR_WEIGHTS'] = torch.tensor(self.params['CHAR_WEIGHTS'], dtype=torch.float)
             else:
                 self.params['CHAR_WEIGHTS'] = torch.ones(self.vocab_size, dtype=torch.float)
-        ### DDP INITIALIZATION
-        if 'INIT_METHOD' not in self.params.keys():
-            self.params['INIT_METHOD'] = 'tcp://127.0.0.1:3456'
-        if 'DIST_BACKEND' not in self.params.keys():
-            self.params['DIST_BACKEND'] = 'nccl'
-        if 'DISTRIBUTED' not in self.params.keys():
-            self.params['DISTRIBUTED'] = True
-        if 'WORLD_SIZE' not in self.params.keys():
-            self.params['WORLD_SIZE'] = 1
-        if 'NUM_WORKERS' not in self.params.keys():
-            self.params['NUM_WORKERS'] = 0
-        if 'DDP' not in self.params.keys():
-            self.params['DDP'] = False
-        self.loss_func = vae_loss
-        self.data_gen = vae_data_gen
+                
         ### Sequence length hard-coded into model
         self.src_len = 126
         self.tgt_len = 125
@@ -120,7 +93,7 @@ class VAEShell():
         Arguments:
             checkpoint_path (str, required): Path to saved .ckpt file
         """
-         
+        ###Loading on either GPU or CPU 
         if 'gpu' in self.params['HARDWARE']:
             if self.params['DDP']:
                 map_location = {'cuda:%d' % 0: 'cuda:%d' % rank}
@@ -129,32 +102,29 @@ class VAEShell():
                 loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cuda'))
         else: 
             loaded_checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+        ###Load checkpoint from specified path and saved state
         self.loaded_from = checkpoint_path
+        ###This is the outer dict defined on line 47 above
         for k in self.current_state.keys():
-            try:
+            try: 
                 self.current_state[k] = loaded_checkpoint[k]
-            except KeyError:
+            except KeyError: 
                 self.current_state[k] = None
 
-        if self.name is None:
-            self.name = self.current_state['name']
-        else:
-            pass
+        self.vocab_size = len(self.current_state['params']['CHAR_DICT'].keys())
+        self.pad_idx = self.current_state['params']['CHAR_DICT']['_']
+        state_dict = self.current_state['model_state_dict']
+        self.name = self.current_state['name']
         self.n_epochs = self.current_state['epoch']
         self.best_loss = self.current_state['best_loss']
+        #This is the last key in the outer dict. Need to match the values from the ckpt.
         for k, v in self.current_state['params'].items():
             if k in self.arch_params or k not in self.params.keys():
                 self.params[k] = v
-            else:
-                pass
-        self.vocab_size = len(self.params['CHAR_DICT'].keys())
-        self.pad_idx = self.params['CHAR_DICT']['_']
-        self.build_model()
-        
-        state_dict = self.current_state['model_state_dict']
+        #once we have all the parameters set we build the model        
+        self.build_model()    
         
         # Necessary code to remove additional 'module' string attached to 'dict_items' by DDP model
-        #print(list(state_dict)[0])
         if 'module' in list(state_dict)[0]:
             from collections import OrderedDict
             new_state_dict = OrderedDict()
@@ -165,7 +135,8 @@ class VAEShell():
         else:
             self.model.load_state_dict(self.current_state['model_state_dict'])        
         
-        if self.model_type == 'aae': #load the aae generator and discriminator optimizers separately
+        #Load the aae generator and discriminator optimizers separately
+        if self.model_type == 'aae': 
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'][0],self.current_state['optimizer_state_dict'][1])
         else:
             self.optimizer.load_state_dict(self.current_state['optimizer_state_dict'])
@@ -193,8 +164,8 @@ class VAEShell():
         torch.backends.cudnn.benchmark = True #optimize run-time for fixed model input size
         
         ### Prepare data iterators
-        train_data = self.data_gen(train_mols,self.src_len, self.name, train_props, char_dict=self.params['CHAR_DICT'])
-        val_data = self.data_gen(val_mols, self.src_len, self.name, val_props, char_dict=self.params['CHAR_DICT'])
+        train_data = vae_data_gen(train_mols,self.src_len, self.name, train_props, char_dict=self.params['CHAR_DICT'])
+        val_data = vae_data_gen(val_mols, self.src_len, self.name, val_props, char_dict=self.params['CHAR_DICT'])
         
         #SPECIAL DATA INPUT FOR DDP
         if self.params['DDP']:
@@ -221,7 +192,7 @@ class VAEShell():
         self.chunk_size = self.params['BATCH_SIZE'] // self.params['BATCH_CHUNKS'] #chunks for TransVAE
 
       
-        ### Determine save frequency
+        ### If save freq not specified set to num epochs
         if save_freq is None:
             save_freq = epochs
             
@@ -248,10 +219,8 @@ class VAEShell():
         kl_annealer = KLAnnealer(self.params['BETA_INIT'], self.params['BETA'],
                                  epochs, self.params['ANNEAL_START'])
         ####################################################################################################
-
-        ### Epoch loop
+        ### Epoch loop start
         for epoch in range(epochs):
-            
             if self.params['DDP']: #Synchronize the GPUs for checkpoint loading using DDP
                 ngpus_per_node = torch.cuda.device_count()
                 local_rank = int(os.environ.get("SLURM_LOCALID")) 
@@ -300,7 +269,6 @@ class VAEShell():
                     if self.model_type == 'aae': #the aae loss is calculated in the forward function due to the 2 backward passes
                         loss, bce, kld, prop_bce, disc_loss = self.model(src, tgt, true_prop,self.params['CHAR_WEIGHTS'], beta,
                                                                               self.optimizer, 'train', src_mask, tgt_mask)
-                        
                         avg_disc_losses.append(disc_loss.item()) #append the disc loss from aae
                         
                     if self.model_type == 'wae': 
@@ -314,7 +282,7 @@ class VAEShell():
                         
                     if self.model_type == 'rnn' or self.model_type =='rnn_attn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
-                        loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
+                        loss, bce, kld, prop_bce = vae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'], self,
                                                                   beta)
@@ -418,7 +386,7 @@ class VAEShell():
                         
                     if self.model_type == 'rnn' or self.model_type =='rnnattn':
                         x_out, mu, logvar, pred_prop = self.model(src, tgt, true_prop, src_mask, tgt_mask)
-                        loss, bce, kld, prop_bce = self.loss_func(src, x_out, mu, logvar,
+                        loss, bce, kld, prop_bce = vae_loss(src, x_out, mu, logvar,
                                                                   true_prop, pred_prop,
                                                                   self.params['CHAR_WEIGHTS'], self,
                                                                   beta)
@@ -519,7 +487,8 @@ class VAEShell():
 
     def greedy_decode(self, mem, print_step=100 ,src_mask=None):
         """
-        Greedy decode from model memory
+        Greedy decode from model memory if the model is a transformer
+        Otherwise just decode from memory
 
         Arguments:
             mem (torch.tensor, req): Memory tensor to send to decoder
@@ -555,12 +524,9 @@ class VAEShell():
                 decode_mask = Variable(subsequent_mask(decoded.size(1)).long())
                 if 'gpu' in self.params['HARDWARE']:
                     decode_mask = decode_mask.cuda()
-                out = self.model.decode(mem, src_mask, Variable(decoded),
-                                        decode_mask)
-               
+                out = self.model.decode(mem, src_mask, Variable(decoded),decode_mask)
             else:
                 out, _ = self.model.decode(tgt, mem)
-                
             out = self.model.generator(out)
             prob = F.softmax(out[:,i,:], dim=-1)
             _, next_word = torch.max(prob, dim=1)

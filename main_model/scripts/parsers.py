@@ -46,12 +46,11 @@ def model_init(args, params={}):
         vae = AAE(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
                   d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
-        
+    
     elif args.model == 'wae':
         vae = WAE(params=params, name=save_name, d_model=args.d_model,
                   d_latent=args.d_latent, property_predictor=args.property_predictor,
                   d_pp=args.d_property_predictor, depth_pp=args.depth_property_predictor, type_pp=args.type_property_predictor)
-
     return vae
 
 def train_parser():
