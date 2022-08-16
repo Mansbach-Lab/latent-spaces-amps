@@ -32,7 +32,8 @@ def DDP_init(self):
     local_rank = int(os.environ.get("SLURM_LOCALID")) 
     rank = int(os.environ.get("SLURM_NODEID"))*ngpus_per_node + local_rank
 
-    """ This next block parses CUDA_VISIBLE_DEVICES to find out which GPUs have been allocated to the job, then sets torch.device to the GPU corresponding       to the local rank (local rank 0 gets the first GPU, local rank 1 gets the second GPU etc) """
+    """ This next block parses CUDA_VISIBLE_DEVICES to find out which GPUs have been allocated to the job, then sets torch.device to the GPU
+        corresponding       to the local rank (local rank 0 gets the first GPU, local rank 1 gets the second GPU etc) """
     print('cuda visible: ',os.environ.get('CUDA_VISIBLE_DEVICES'))
     if os.environ.get('CUDA_VISIBLE_DEVICES') == None:
         available_gpus = 1
@@ -46,7 +47,7 @@ def DDP_init(self):
     self.build_model()
 
     """ this block initializes a process group and initiate communications
-            between all processes running on all nodes """
+        between all processes running on all nodes """
     #print('From Rank: {}, ==> Initializing Process Group...'.format(rank))
     os.system("echo From Rank: {}, ==> Initializing Process Group...".format(rank))
     print("echo From Rank: {}, ==> Initializing Process Group...".format(rank))
