@@ -278,21 +278,25 @@ def build_kmers(sequence, ksize):
 def jaccard_similarity(a, b):
     n_a = set(a)
     n_b = set(b)
-
+#     print(n_a, n_b, "len n_a: {}, len n_b: {}".format(len(n_a),len(n_b)))
     intersection = len(n_a.intersection(n_b))
     union = len(n_a.union(n_b))
+#     print("intersection: ",intersection,"union: ",union)
+    
     return intersection / union
 
 def jaccard_similarity_score(seq_list,k=2):
     import itertools
-    set_1 = list(set(seq_list))
-    combinations = list(itertools.combinations(seq_list,2))
+    combinations = list(itertools.combinations(seq_list,2)) #creates (len(seq_list)-1)! pairs of sequences to compare 
     jac_scores = np.empty(len(combinations))
     for idx, combination in enumerate(combinations):
         if len(combination[0])<=k or len(combination[1])<=k:
             jac_scores[idx]=0
         else:
+#             print(combination[0],combination[1])
+#             print(build_kmers(combination[0],k),'\n',build_kmers(combination[1],k))
             jac_scores[idx] = jaccard_similarity(build_kmers(combination[0],k), build_kmers(combination[1],k))
+#             print("\n\n\n")
     return jac_scores
 
 def uniqueness(seq_list):
