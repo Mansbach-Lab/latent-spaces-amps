@@ -1,1 +1,0 @@
-This version has a 80, 20 train, test split instead of 95, 5 as in the previous versions
