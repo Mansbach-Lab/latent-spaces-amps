@@ -14,3 +14,10 @@ outsourced_models/
 main_model/checkpointz
 main_model/trials
 main_model/model_analyses
+checkpointz
+main_model/model_analyses
+model_analyses/old
+model_analyses/test
+model_analyses/train
+
+

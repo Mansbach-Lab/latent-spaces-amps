@@ -321,17 +321,17 @@ def novelty(new_sequences, dataset_sequences):
 
 def sequence_similarity(seq_list):
     import Bio
+    import itertools
     from Bio import pairwise2
     from Bio.Align import substitution_matrices
     similarity_score=[]
     matrix = substitution_matrices.load("BLOSUM62")
     seq_set = list(set(seq_list))
-    for seq in seq_set[:len(seq_set)//2]: #grab half the list
-        for seq2 in seq_set[len(seq_set)//2:]: #grab other half
-            if len(seq2)==0 or len(seq)==0:
-                similarity_score.append(0)
-            else:
-                similarity_score.append( pairwise2.align.globaldx(seq,seq2, matrix, score_only=True)/(len(seq)+len(seq2)) )
+    for pair in itertools.combinations(seq_set, 2):  #(n^2+n)/2 complexity
+        if len(pair[0])==0 or len(pair[1])==0:
+            similarity_score.append(0)
+        else:
+            similarity_score.append(pairwise2.align.globaldx(pair[0],pair[1], matrix, score_only=True)/(len(pair[0])+len(pair[1])))
     return similarity_score
 
 #STATISTICS CONFIDENCE INTERVAL FUNCTIONS
