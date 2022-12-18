@@ -30,6 +30,19 @@ import Bio
 from Bio import pairwise2
 from Bio.Align import substitution_matrices
 
+"""
+This code is to be run from the "script for combined model analysis notebook"
+Below we load the checkpoints from each model for all latent space sizes and run a series of benchmarks on them
+The benchmarks are as follows:
+    1) Plot the loss curves using the output files from training
+    2) Reconstruction accuracy and sequence metrics
+    3) PCA and latent space distribution metrics
+    4) Sampling metrics and AMP sampling benchmarks
+
+(the naming scheme of the checkpoint files is important in order to get this code to successively load all the checkpoints)
+"""
+
+
 def loss_plots(loss_src):
     tot_loss = analysis.plot_loss_by_type(src,loss_types=['tot_loss'])
     plt.savefig(save_dir+'tot_loss.png')
