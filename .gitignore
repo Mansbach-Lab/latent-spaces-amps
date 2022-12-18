@@ -11,10 +11,5 @@
 main_model/data/peptides/500_fasta.fasta
 main_model/data/peptides/500k/500_fasta.fasta
 main_model/trials
-main_model/model_analyses
-main_model/model_analyses
-model_analyses/old
-model_analyses/test
-model_analyses/train
 
 
