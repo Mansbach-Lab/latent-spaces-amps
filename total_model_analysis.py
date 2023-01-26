@@ -91,16 +91,18 @@ gpu = True
 
 num_sequences = 500_000
 batch_size = 200 #setting for reconstruction
-example_data = 'slurm_analyses/data/sunistar/peptide_test.txt'
-save_dir_loc = 'slurm_analyses/' #folder in which to save outpts
+example_data = 'data/peptide_test.txt'
+save_dir_loc = 'model_analyses\\test\\' #folder in which to save outpts
 save_dir_name = 'test' #appended to identify data: train|test|other|etc...
 
 reconstruct=True #True:reconstruct data here; False:load reconstructions from file
 recon_src = "checkpointz/analyses_ckpts/" #directory in which all reconstructions are stored
-true_prop_src = "slurm_analyses/data/sunistar/function_test.txt" #if property predictor load the true labels
+true_prop_src = "data/function_test.txt" #if property predictor load the true labels
 subset_src = "" #(optional) this file should have the true sequences for a subset of the "example data" above
 
-ckpt_list = glob.glob(""+"temp_ckpt//**//*.ckpt", recursive = True) #grab all checkpoint
+phys_chem_props_dir = 'data//'
+
+ckpt_list = glob.glob("checkpointz//all_300_ckpts//**//*.ckpt", recursive = True) #grab all checkpoint
 print('current working directory: ',os.getcwd())
 
 
@@ -222,11 +224,11 @@ for i in range(len(ckpt_list)):
     #     plt.close()
 
     # #plot format dictionnaries
-    # titles={'text':'{}'.format(model.model_type.replace("_"," ").upper()),
-    #                       'x':0.5,'xanchor':'center','yanchor':'top','font_size':40}
-    # general_fonts={'family':"Helvetica",'size':30,'color':"Black"}
-    # colorbar_fmt={'title_font_size':30,'thickness':15,'ticks':'','title_text':'Lengths',
-    #                            'ticklabelposition':"outside bottom"}
+    titles={'text':'{}'.format(model.model_type.replace("_"," ").upper()),
+                          'x':0.5,'xanchor':'center','yanchor':'top','font_size':40}
+    general_fonts={'family':"Helvetica",'size':30,'color':"Black"}
+    colorbar_fmt={'title_font_size':30,'thickness':15,'ticks':'','title_text':'Lengths',
+                               'ticklabelposition':"outside bottom"}
     
     # fig = px.scatter(pd.DataFrame({"PC1":pca_batch[:,0],"PC2":pca_batch[:,1], "lengths":pep_lengths}),
     #             symbol_sequence=['hexagon2'],x='PC1', y='PC2', color="lengths",
@@ -247,12 +249,14 @@ for i in range(len(ckpt_list)):
     #     fig.update_layout(title=titles,xaxis_title="PC{}".format(pc_pair[0]),yaxis_title="PC{}".format(pc_pair[1]),font=general_fonts)
     #     fig.write_image(save_dir+'pca[{},{}]_function.png'.format(pc_pair[0],pc_pair[1]), width=2_000, height=1_000)
     
-    # # Plot the explained variances
+    # Plot the explained variances
+    # plt.figure()
     # plt.bar(range(pca.n_components_), pca.explained_variance_ratio_*100, color='black')
     # plt.xlabel('PCA features')
     # plt.ylabel('variance %')
     # plt.xticks(range(pca.n_components_))
-    # plt.savefig(save_dir+'variance_explained.png')
+    # plt.savefig(save_dir+model.name+latent_size[0]+'.png', facecolor='white',transparent=None,)
+    # plt.close()
 
     # Section to plot all PCs simultaneously DEPRECATED <--
     # fig = px.scatter_matrix(pd.DataFrame({"PC1":pca_batch[:,0],"PC2":pca_batch[:,1],"PC3":pca_batch[:,2],
@@ -282,7 +286,7 @@ for i in range(len(ckpt_list)):
     # else:
     #     phys_props = pd.read_csv(phys_chem_props_dir+'test_physicochem_props.csv')
 
-    #first calculate silhouette score on all latent space dims
+    # first calculate silhouette score on all latent space dims
     n=15
     latent_mem_func_subsamples = []
     for s in range(n):
@@ -365,29 +369,29 @@ for i in range(len(ckpt_list)):
     # df_gen_scores.update({'percent_novel':percent_novel})
     # df_gen_scores.update({'novel_confidence':novel_conf})
     
-    #AMP SAMPLING
-    peptides_to_probe=10
-    sample_count=100
+    # #AMP SAMPLING
+    # peptides_to_probe=10
+    # sample_count=100
     best_pc = np.argmax(top_5_single_pc_silhouettes) #find the best PCvsAMP correlation
-    pca_mean = np.average(pca_batch[:,best_pc])
-    pca_std = np.std(pca_batch[:,best_pc])
-    pca_scan = np.zeros((peptides_to_probe,5)) #create a reduced vector to be sent backwards to high-D
-    pca_scan[:,best_pc]=np.linspace(start=pca_mean-(4*pca_std), stop=pca_mean+(4*pca_std), num=peptides_to_probe) #scan 1 dim evenly with best PC
-    amp_sample_latents = pca.inverse_transform(pca_scan) #inverse to high-Dims for decoding
-    all_gen_seqs = [] #stored in a text file for AMP prediction later
-    for idx,amp in enumerate(amp_sample_latents):
-        print("working on amp sample number: ",idx)
-        nearby_samples = np.random.normal(loc=amp,scale=pca_std/5,size=(sample_count,1,model.params['d_latent'])).astype(np.float32)
-        model.params['BATCH_SIZE'] = 25
-        rnd_token_list=np.empty((sample_count,model.tgt_len)) #store N decoded latent vectors now in token(0-20) form max length 125
-        for batch in range(0,sample_count,model.params['BATCH_SIZE']):
-            rnd_token_list[batch:batch+model.params['BATCH_SIZE']] =  model.greedy_decode(torch.tensor(nearby_samples[batch:batch+model.params['BATCH_SIZE']]).squeeze().cuda()).cpu()
-        decoded_rnd_seqs = decode_mols(torch.tensor(rnd_token_list), model.params['ORG_DICT'])
+    # pca_mean = np.average(pca_batch[:,best_pc])
+    # pca_std = np.std(pca_batch[:,best_pc])
+    # pca_scan = np.zeros((peptides_to_probe,5)) #create a reduced vector to be sent backwards to high-D
+    # pca_scan[:,best_pc]=np.linspace(start=pca_mean-(4*pca_std), stop=pca_mean+(4*pca_std), num=peptides_to_probe) #scan 1 dim evenly with best PC
+    # amp_sample_latents = pca.inverse_transform(pca_scan) #inverse to high-Dims for decoding
+    # all_gen_seqs = [] #stored in a text file for AMP prediction later
+    # for idx,amp in enumerate(amp_sample_latents):
+    #     print("working on amp sample number: ",idx)
+    #     nearby_samples = np.random.normal(loc=amp,scale=pca_std/5,size=(sample_count,1,model.params['d_latent'])).astype(np.float32)
+    #     model.params['BATCH_SIZE'] = 25
+    #     rnd_token_list=np.empty((sample_count,model.tgt_len)) #store N decoded latent vectors now in token(0-20) form max length 125
+    #     for batch in range(0,sample_count,model.params['BATCH_SIZE']):
+    #         rnd_token_list[batch:batch+model.params['BATCH_SIZE']] =  model.greedy_decode(torch.tensor(nearby_samples[batch:batch+model.params['BATCH_SIZE']]).squeeze().cuda()).cpu()
+    #     decoded_rnd_seqs = decode_mols(torch.tensor(rnd_token_list), model.params['ORG_DICT'])
         
-        for seq in decoded_rnd_seqs:
-            if len(seq)<=50 and len(seq)>0: #save only sequences with length <=50
-                all_gen_seqs.append(seq) #appending to list of all generated sequences
-        decoded_rnd_seqs = [seq for seq in decoded_rnd_seqs if len(seq)>0 and len(seq)<=50] #keep constrained length seqs
+    #     for seq in decoded_rnd_seqs:
+    #         if len(seq)<=50 and len(seq)>0: #save only sequences with length <=50
+    #             all_gen_seqs.append(seq) #appending to list of all generated sequences
+    #     decoded_rnd_seqs = [seq for seq in decoded_rnd_seqs if len(seq)>0 and len(seq)<=50] #keep constrained length seqs
         
     #     print("starting Sequence similarity")
     #     #SEQ SIMILARITY
@@ -410,10 +414,17 @@ for i in range(len(ckpt_list)):
     #     df_gen_scores.update({'amp_jac_score_3_'+str(idx): np.average(jac_scores_3)})
     #     df_gen_scores.update({'amp_jac_score_std_3_'+str(idx): np.std(jac_scores_3)})
     
-    #Store Output
-    with open(save_dir+'all_gen_seqs.txt','w') as f:
-        for seq in all_gen_seqs:
-            f.write(str(seq)+"\n")
+    # #Store Output
+    # with open(save_dir+'all_gen_seqs.txt','w') as f:
+    #     for seq in all_gen_seqs:
+    #         f.write(str(seq)+"\n")
+    # f.close()
+    with open(save_dir+'PC_minmax.txt','w') as f:
+        pca_min = np.min(pca_batch[:,best_pc])
+        pca_max = np.max(pca_batch[:,best_pc])
+        f.write(str(pca_min))
+        f.write('\t')
+        f.write(str(pca_max))
     f.close()
     # with open(save_dir+'PC_meanstd.txt','w') as f:
     #     f.write(str(pca_mean))
