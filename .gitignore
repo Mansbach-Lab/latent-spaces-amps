@@ -1,4 +1,4 @@
-*.csv
+
 *.smi.gz
 *.fasta
 *.png
@@ -11,3 +11,4 @@
 main_model/trials
 
 
+data/dataset_construction/uniprot_sequences_and_lengths.csv
