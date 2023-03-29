@@ -2,7 +2,7 @@
 <H1><a href="https://pubs.rsc.org/en/content/articlelanding/2023/dd/d2dd00091a#!divAbstract">Latent Spaces for AMP design</a></H1>
 
 
-<h3>A project investigating de novo antimicrobial peptide generation using VAEs and exploring latent spaces</h3>
+<h3>De novo antimicrobial peptide generation using VAEs and exploring latent spaces</h3>
 
 <h4> Structure of the Git Repo:</h4>
 
